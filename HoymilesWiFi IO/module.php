@@ -142,8 +142,8 @@ class HoymilesWiFiIO extends IPSModuleStrict
                     $this->SetStatus(IS_EBASE + 1);
                     return;
                 }
-                $this->NightVariableIsTimeStamp = (IPS_GetVariable($this->NightVariableId)['VariableProfile'] == '~UnixTimestamp');
-                $this->DayVariableIsTimeStamp = (IPS_GetVariable($this->DayVariableId)['VariableProfile'] == '~UnixTimestamp');
+                $this->NightVariableIsTimeStamp = $this->VariableIsTimestamp($this->NightVariableId);
+                $this->DayVariableIsTimeStamp = $this->VariableIsTimestamp($this->DayVariableId);
                 if ($this->DayVariableIsTimeStamp) {
                     $this->DayNightCheck(GetValue($this->DayVariableId), GetValue($this->NightVariableId));
                 } else {
@@ -254,7 +254,7 @@ class HoymilesWiFiIO extends IPSModuleStrict
             $StartVariableId = false;
         } else {
             if (IPS_VariableExists($StartVariableId)) {
-                if (IPS_GetVariable($StartVariableId)['VariableProfile'] == '~UnixTimestamp') {
+                if ($this->VariableIsTimestamp($StartVariableId)) {
                     $StartVariableId = false;
                 }
             } else {
@@ -275,7 +275,7 @@ class HoymilesWiFiIO extends IPSModuleStrict
             $StopVariableId = false;
         } else {
             if (IPS_VariableExists($StopVariableId)) {
-                if (IPS_GetVariable($StopVariableId)['VariableProfile'] == '~UnixTimestamp') {
+                if ($this->VariableIsTimestamp($StopVariableId)) {
                     $StopVariableId = false;
                 }
             } else {
@@ -320,7 +320,7 @@ class HoymilesWiFiIO extends IPSModuleStrict
                 $Request->setTime(time());
                 $Request->setTid(time());
                 $Request->setPackageNub(1);
-                $Request->setAction(8);
+                $Request->setAction(\HoymilesWiFi\Inverter\Actions::LIMIT_POWER);
                 $Request->setData($Data['Data']);
                 $RequestBytes = $Request->serializeToString();
                 $ResultStream = $this->SendCommand(\Hoymiles\DTU\Commands::CommandResDTO, $RequestBytes);
@@ -330,7 +330,38 @@ class HoymilesWiFiIO extends IPSModuleStrict
                 $Result = new \Hoymiles\CommandReqDTO();
                 $Result->mergeFromString($ResultStream);
                 return serialize($Result->getErrCode() == 0);
+            case 'StartInverter':
+                $Request = new \Hoymiles\CommandResDTO();
+                $Request->setTime(time());
+                $Request->setTid(time());
+                $Request->setPackageNub(1);
+                $Request->setAction(\HoymilesWiFi\Inverter\Actions::MI_START);
+                $RequestBytes = $Request->serializeToString();
+                $ResultStream = $this->SendCommand(\Hoymiles\DTU\Commands::CommandResDTO, $RequestBytes);
+                if (!$ResultStream) {
+                    return serialize(false);
+                }
+                $Result = new \Hoymiles\CommandReqDTO();
+                $Result->mergeFromString($ResultStream);
+                $this->SendDebug('StartInverter Result', $Result->serializeToJsonString(), 0);
+                return serialize($Result->getErrCode() == 0);
+            case 'StopInverter':
+                $Request = new \Hoymiles\CommandResDTO();
+                $Request->setTime(time());
+                $Request->setTid(time());
+                $Request->setPackageNub(1);
+                $Request->setAction(\HoymilesWiFi\Inverter\Actions::MI_SHUTDOWN);
+                $RequestBytes = $Request->serializeToString();
+                $ResultStream = $this->SendCommand(\Hoymiles\DTU\Commands::CommandResDTO, $RequestBytes);
+                if (!$ResultStream) {
+                    return serialize(false);
+                }
+                $Result = new \Hoymiles\CommandReqDTO();
+                $Result->mergeFromString($ResultStream);
+                $this->SendDebug('Stop Result', $Result->serializeToJsonString(), 0);
+                return serialize($Result->getErrCode() == 0);
         }
+        return '';
     }
 
     /*
@@ -376,19 +407,19 @@ class HoymilesWiFiIO extends IPSModuleStrict
         $Result->mergeFromString($ResultStream);
      */
     /*
-        $Request = new \Hoymiles\CommandResDTO();
-        $Request->setTime(time());
-        $Request->setTid(time());
-        $Request->setPackageNub(1);
-        $Request->setAction(8);
-        $Request->setData("A:800\r");
-        $RequestBytes = $Request->serializeToString();
-        $ResultStream = $this->SendCommand(\Hoymiles\DTU\Commands::CommandResDTO, $RequestBytes);
-        if (!$ResultStream) {
-            return false;
-        }
-        $Result = new \Hoymiles\CommandReqDTO();
-        $Result->mergeFromString($ResultStream);
+    $Request = new \Hoymiles\CommandResDTO();
+    $Request->setTime(time());
+    $Request->setTid(time());
+    $Request->setPackageNub(1);
+    $Request->setAction(8);
+    $Request->setData("A:800\r");
+    $RequestBytes = $Request->serializeToString();
+    $ResultStream = $this->SendCommand(\Hoymiles\DTU\Commands::CommandResDTO, $RequestBytes);
+    if (!$ResultStream) {
+        return false;
+    }
+    $Result = new \Hoymiles\CommandReqDTO();
+    $Result->mergeFromString($ResultStream);
      */
     /*
         $Request = new \Hoymiles\WarnResDTO();
@@ -504,7 +535,7 @@ class HoymilesWiFiIO extends IPSModuleStrict
         }
         switch (IPS_GetVariable($VariableId)['VariableType']) {
             case VARIABLETYPE_INTEGER:
-                if (IPS_GetVariable($VariableId)['VariableProfile'] == '~UnixTimestamp') {
+                if ($this->VariableIsTimestamp($VariableId)) {
                     $this->UpdateFormField($Property, 'variableID', 1);
                     $this->UpdateFormField($Property, 'visible', false);
                     $this->UpdateFormField($Property, 'value', '""');
@@ -587,6 +618,27 @@ class HoymilesWiFiIO extends IPSModuleStrict
         }
     }
 
+    private function VariableIsTimestamp(int $VariableId): bool
+    {
+        $Variable = IPS_GetVariable($this->NightVariableId);
+        if ($Variable['VariablePresentation']['PRESENTATION'] == VARIABLE_PRESENTATION_LEGACY) {
+            if ($Variable['VariablePresentation']['PROFILE'] == '~UnixTimestamp') {
+                return true;
+            }
+        }
+        if ($Variable['VariableCustomPresentation']['PRESENTATION'] == VARIABLE_PRESENTATION_LEGACY) {
+            if ($Variable['VariableCustomPresentation']['PROFILE'] == '~UnixTimestamp') {
+                return true;
+            }
+        }
+        if ($Variable['VariablePresentation']['PRESENTATION'] == VARIABLE_PRESENTATION_DATE_TIME) {
+            return true;
+        }
+        if ($Variable['VariableCustomPresentation']['PRESENTATION'] == VARIABLE_PRESENTATION_DATE_TIME) {
+            return true;
+        }
+        return false;
+    }
     private function RealDataResDTO(): bool
     {
         $Request = new \Hoymiles\RealDataResDTO();

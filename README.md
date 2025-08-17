@@ -1,6 +1,6 @@
 [![SDK](https://img.shields.io/badge/Symcon-PHPModul-red.svg)](https://www.symcon.de/service/dokumentation/entwicklerbereich/sdk-tools/sdk-php/)
-[![Version](https://img.shields.io/badge/Modul%20version-1.00-blue.svg)]()
-![Version](https://img.shields.io/badge/Symcon%20Version-7.0%20%3E-green.svg)  
+[![Version](https://img.shields.io/badge/Modul%20version-1.20-blue.svg)](https://community.symcon.de/t/modul-hoymiles-wifi-series-beta/135536/)
+[![Version](https://img.shields.io/badge/Symcon%20Version-8.1%20%3E-green.svg)](https://www.symcon.de/de/service/dokumentation/installation/migrationen/v80-v81-q3-2025/)  
 [![License](https://img.shields.io/badge/License-CC%20BY--NC--SA%204.0-green.svg)](https://creativecommons.org/licenses/by-nc-sa/4.0/)
 [![Check Style](https://github.com/Nall-chan/HoymilesWiFi/workflows/Check%20Style/badge.svg)](https://github.com/Nall-chan/HoymilesWiFi/actions) [![Run Tests](https://github.com/Nall-chan/HoymilesWiFi/workflows/Run%20Tests/badge.svg)](https://github.com/Nall-chan/HoymilesWiFi/actions)  
 [![Spenden](https://www.paypalobjects.com/de_DE/DE/i/btn/btn_donate_SM.gif)](#6-spenden)
@@ -16,6 +16,7 @@ Integration der Hoymiles Wechselrichter mit integrierten WiFi
 
 **Inhaltsverzeichnis**
 - [1. Funktionsumfang](#1-funktionsumfang)
+- [2. Voraussetzungen](#2-voraussetzungen)
 - [3. Software-Installation](#3-software-installation)
 - [4. Einrichten der Instanzen in IP-Symcon](#4-einrichten-der-instanzen-in-ip-symcon)
 - [5. Anhang](#5-anhang)
@@ -43,9 +44,9 @@ Folgende Module beinhaltet das Hoymiles WiFi Smart Rollos Repository:
 - __Hoymiles WiFi SolarPort__ ([Dokumentation](HoymilesWiFi%20SolarPort/README.md))  
 	Geräte Instanz für jeweils einen Anschluss von Solarmodulen.  
 
-	## 2. Voraussetzungen  
+## 2. Voraussetzungen  
 
- * Symcon ab Version 7.0  
+ * Symcon ab Version 8.1  
  * Hoymiles Wechselrichter mit WiFi (integrierte DTU)
   
 ## 3. Software-Installation
@@ -72,6 +73,12 @@ Dadurch wird automatisch der benötigte [IO](HoymilesWiFi%20IO/README.md) erstel
 |  Hoymiles WiFi SolarPort   |    Device    | {65B18475-D1B7-825C-5958-5300C1100845} |
 
 ### 2. Changelog
+
+**Version 1.2:**  
+
+- Version für Symcon 8.1 und neuer  
+- Durchgängige Nutzung von Darstellungen anstatt von Profilen  
+- Neue Instanz-Funktion `HMSWIFI_SetInverterState` für die Inverter-Instanz  
 
 **Version 1.0:**  
 

@@ -4,9 +4,9 @@
     "author": "Michael Tröger",
     "url": "https://github.com/Nall-chan/HoymilesWiFi/",
     "compatibility": {
-        "version": "7.0"
+        "version": "8.1"
     },
-    "version": "1.00",
-    "build": 100,
-    "date": 1724516416
+    "version": "1.20",
+    "build": 120,
+    "date": 1755426962
 }

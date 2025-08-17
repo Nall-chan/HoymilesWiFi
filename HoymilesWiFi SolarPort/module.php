@@ -17,7 +17,6 @@ class HoymilesWiFiSolarPort extends IPSModuleStrict
         //Never delete this line!
         parent::Create();
         $this->RegisterPropertyInteger(\HoymilesWiFi\SolarPort\Property::Port, 1);
-        $this->ConnectParent(\HoymilesWiFi\GUID::IO);
     }
 
     public function ApplyChanges(): void
@@ -51,9 +50,8 @@ class HoymilesWiFiSolarPort extends IPSModuleStrict
                 continue;
             }
             $Var = \HoymilesWiFi\SolarPort\Variables::$Vars[$Key];
-            if (!$this->FindIDForIdent($Key)) {
-                $this->MaintainVariable($Key, $this->Translate($Var[0]), $Var[1], $Var[2], 0, true);
-            }
+            $this->MaintainVariable($Key, $this->Translate($Var[0]), $Var[1], $Var[2], 0, true);
+
             switch ($Var[1]) {
                 case VARIABLETYPE_FLOAT:
                     $this->SetValueFloat($Key, $Value * $Var[3]);

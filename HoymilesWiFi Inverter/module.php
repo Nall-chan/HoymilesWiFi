@@ -20,7 +20,6 @@ class HoymilesWiFiInverter extends IPSModuleStrict
         //Never delete this line!
         parent::Create();
         $this->RegisterPropertyInteger(\HoymilesWiFi\Inverter\Property::Number, 1);
-        $this->ConnectParent(\HoymilesWiFi\GUID::IO);
     }
 
     public function ApplyChanges(): void
@@ -80,6 +79,23 @@ class HoymilesWiFiInverter extends IPSModuleStrict
         return $Result;
     }
 
+    public function SetInverterState(bool $Active): bool
+    {
+        if (!$this->HasActiveParent() || (@IPS_GetInstance($this->InstanceID)['ConnectionID'] < 10000)) {
+            trigger_error($this->Translate('Instance has no active parent'), E_USER_NOTICE);
+        }
+        $Number = $this->ReadPropertyInteger(\HoymilesWiFi\Inverter\Property::Number);
+        if (($Number < 1) || ($Number > 3)) {
+            return false;
+        }
+        $ret = $this->SendDataToParent(json_encode([
+            'DataID'   => \HoymilesWiFi\GUID::DeviceToIo,
+            'Function' => $Active ? 'StartInverter' : 'StopInverter',
+            'Data'     => ''
+        ]));
+        return unserialize($ret);
+    }
+
     private function DecodeData(array $DataValues): void
     {
         foreach ($DataValues as $Key => $Value) {
@@ -87,14 +103,13 @@ class HoymilesWiFiInverter extends IPSModuleStrict
                 continue;
             }
             $Var = \HoymilesWiFi\Inverter\Variables::$Vars[$Key];
-            if (!$this->FindIDForIdent($Key)) {
-                $this->MaintainVariable($Key, $this->Translate($Var[0]), $Var[1], $Var[2], 0, true);
-                if (count($Var) > 4) {
-                    if ($Var[4]) {
-                        $this->EnableAction($Key);
-                    }
+            $this->MaintainVariable($Key, $this->Translate($Var[0]), $Var[1], $Var[2], 0, true);
+            if (count($Var) > 4) {
+                if ($Var[4]) {
+                    $this->EnableAction($Key);
                 }
             }
+
             switch ($Var[1]) {
                 case VARIABLETYPE_FLOAT:
                     $this->SetValueFloat($Key, $Value * $Var[3]);

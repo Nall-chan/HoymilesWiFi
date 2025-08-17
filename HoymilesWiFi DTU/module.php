@@ -17,7 +17,6 @@ class HoymilesWiFiDTU extends IPSModuleStrict
     {
         //Never delete this line!
         parent::Create();
-        $this->ConnectParent(\HoymilesWiFi\GUID::IO);
     }
 
     public function ApplyChanges(): void
@@ -44,9 +43,7 @@ class HoymilesWiFiDTU extends IPSModuleStrict
                 continue;
             }
             $Var = \HoymilesWiFi\DTU\Variables::$Vars[$Key];
-            if (!$this->FindIDForIdent($Key)) {
-                $this->MaintainVariable($Key, $this->Translate($Var[0]), $Var[1], $Var[2], 0, true);
-            }
+            $this->MaintainVariable($Key, $this->Translate($Var[0]), $Var[1], $Var[2], 0, true);
             switch ($Var[1]) {
                 case VARIABLETYPE_INTEGER:
                     $this->SetValueInteger($Key, $Value);

@@ -1,6 +1,6 @@
 [![SDK](https://img.shields.io/badge/Symcon-PHPModul-red.svg)](https://www.symcon.de/service/dokumentation/entwicklerbereich/sdk-tools/sdk-php/)
-[![Version](https://img.shields.io/badge/Modul%20version-1.00-blue.svg)]()
-![Version](https://img.shields.io/badge/Symcon%20Version-7.0%20%3E-green.svg)  
+[![Version](https://img.shields.io/badge/Modul%20version-1.20-blue.svg)](https://community.symcon.de/t/modul-hoymiles-wifi-series-beta/135536/)
+[![Version](https://img.shields.io/badge/Symcon%20Version-8.1%20%3E-green.svg)](https://www.symcon.de/de/service/dokumentation/installation/migrationen/v80-v81-q3-2025/)  
 [![License](https://img.shields.io/badge/License-CC%20BY--NC--SA%204.0-green.svg)](https://creativecommons.org/licenses/by-nc-sa/4.0/)
 [![Check Style](https://github.com/Nall-chan/HoymilesWiFi/workflows/Check%20Style/badge.svg)](https://github.com/Nall-chan/HoymilesWiFi/actions) [![Run Tests](https://github.com/Nall-chan/HoymilesWiFi/workflows/Run%20Tests/badge.svg)](https://github.com/Nall-chan/HoymilesWiFi/actions)  
 [![Spenden](https://www.paypalobjects.com/de_DE/DE/i/btn/btn_donate_SM.gif)](#9-spenden)
@@ -15,7 +15,7 @@ Darstellen der ausgelesenen Werte aus der DTU
 - [2. Voraussetzungen](#2-voraussetzungen)
 - [3. Software-Installation](#3-software-installation)
 - [4. Einrichten der Instanzen in IP-Symcon](#4-einrichten-der-instanzen-in-ip-symcon)
-- [5. Statusvariablen und Profile](#5-statusvariablen-und-profile)
+- [5. Statusvariablen](#5-statusvariablen)
   - [Statusvariablen](#statusvariablen)
 - [6. PHP-Befehlsreferenz](#6-php-befehlsreferenz)
 - [7. Changelog](#7-changelog)
@@ -28,7 +28,7 @@ Darstellen der ausgelesenen Werte aus der DTU
 
 ## 2. Voraussetzungen
 
- * Symcon ab Version 7.0  
+ * Symcon ab Version 8.1  
  * Hoymiles Wechselrichter mit WiFi (integrierte DTU)
 
 ## 3. Software-Installation
@@ -46,17 +46,17 @@ Es wird empfohlen diese Instanz über die dazugehörige Instanz des [Configurato
 ![Instanzen](../imgs/inst.png) 
 
 
-## 5. Statusvariablen und Profile
+## 5. Statusvariablen
 
 Die Statusvariablen werden automatisch angelegt. Das Löschen einzelner kann zu Fehlfunktionen führen.
 
 ### Statusvariablen
 
-| Name           | Typ     | Profil          | Beschreibung      |
-| -------------- | ------- | --------------- | ----------------- |
-| Uhrzeit        | Integer | ~UnixTimestamp  | Uhrzeit der DTU   |
-| Leistung       | Float   | ~Electricity.Wh | Aktuelle Leistung |
-| Ertrag täglich | Float   | ~UnixTimestamp  | Tagesertrag       |
+| Name           | Typ     | Beschreibung      |
+| -------------- | ------- | ----------------- |
+| Uhrzeit        | Integer | Uhrzeit der DTU   |
+| Leistung       | Float   | Aktuelle Leistung |
+| Ertrag täglich | Float   | Tagesertrag       |
 
 ## 6. PHP-Befehlsreferenz
 

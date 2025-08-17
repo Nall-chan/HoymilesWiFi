@@ -63,6 +63,21 @@ namespace HoymilesWiFi\IO{
 }
 
 namespace HoymilesWiFi\Inverter{
+
+    class Actions
+    {
+        public const DTU_REBOOT = 1;
+        public const MI_REBOOT = 3;
+        public const MI_START = 6;
+        public const MI_SHUTDOWN = 7;
+        public const LIMIT_POWER = 8;
+        public const PERFORMANCE_DATA_MODE = 33;
+        public const ALARM_LIST = 50;
+        public const GW_REBOOT = 4096;
+        public const INV_START = 8193;
+        public const INV_SHUTDOWN = 8194;
+        public const INV_REBOOT = 8195;
+    }
     class Property
     {
         public const Number = 'Number';
@@ -79,14 +94,146 @@ namespace HoymilesWiFi\Inverter{
         public const Link = 'link'; // bool ?
         public const PowerLimit = 'pLim'; // 0.1 %
         public static $Vars = [
-            self::Voltage           => ['Voltage', VARIABLETYPE_FLOAT, '~Volt.230', 0.1],
-            self::Frequenz          => ['Frequenz', VARIABLETYPE_FLOAT, '~Hertz.50', 0.01],
-            self::Power             => ['Power', VARIABLETYPE_FLOAT, '~Watt', 0.1],
-            self::Current           => ['Current', VARIABLETYPE_FLOAT, '~Ampere', 0.01],
-            self::PowerFactor       => ['Power factor', VARIABLETYPE_FLOAT, '~Valve.F', 0.1],
-            self::Temp              => ['Temperature', VARIABLETYPE_FLOAT, '~Temperature', 0.1],
-            self::Link              => ['Link', VARIABLETYPE_BOOLEAN, '~Alert.Reversed'],
-            self::PowerLimit        => ['Power Limit', VARIABLETYPE_INTEGER, '~Intensity.100', 0.1, true],
+            self::Voltage     => [
+                'Voltage',
+                VARIABLETYPE_FLOAT,
+                [
+                    'ICON'                => 'bolt',
+                    'DECIMAL_SEPARATOR'   => 'Client',
+                    'COLOR'               => -1,
+                    'MIN'                 => 0,
+                    'DIGITS'              => 1,
+                    'MAX'                 => 0,
+                    'PRESENTATION'        => VARIABLE_PRESENTATION_VALUE_PRESENTATION,
+                    'INTERVALS'           => '[]',
+                    'INTERVALS_ACTIVE'    => false,
+                    'PERCENTAGE'          => false,
+                    'PREFIX'              => '',
+                    'SUFFIX'              => ' V',
+                    'THOUSANDS_SEPARATOR' => 'Client',
+                    'USAGE_TYPE'          => 0
+                ],
+                0.1
+            ],
+            self::Frequenz    => [
+                'Frequenz',
+                VARIABLETYPE_FLOAT,
+                [
+                    'ICON'                => 'Electricity',
+                    'DECIMAL_SEPARATOR'   => 'Client',
+                    'COLOR'               => -1,
+                    'MIN'                 => 0,
+                    'DIGITS'              => 2,
+                    'MAX'                 => 0,
+                    'PRESENTATION'        => VARIABLE_PRESENTATION_VALUE_PRESENTATION,
+                    'INTERVALS'           => '[]',
+                    'INTERVALS_ACTIVE'    => false,
+                    'PERCENTAGE'          => false,
+                    'PREFIX'              => '',
+                    'SUFFIX'              => ' Hz',
+                    'THOUSANDS_SEPARATOR' => '',
+                    'USAGE_TYPE'          => 0,
+                ],
+                0.01
+            ],
+            self::Power       => [
+                'Power',
+                VARIABLETYPE_FLOAT,
+                [
+                    'PRESENTATION' => VARIABLE_PRESENTATION_VALUE_PRESENTATION,
+                    'TEMPLATE'     => VARIABLE_TEMPLATE_VALUE_PRESENTATION_POWER
+                ],
+                0.1
+            ],
+            self::Current     => [
+                'Current',
+                VARIABLETYPE_FLOAT,
+                [
+                    'ICON'                => 'bolt',
+                    'DECIMAL_SEPARATOR'   => 'Client',
+                    'COLOR'               => -1,
+                    'MIN'                 => 0,
+                    'DIGITS'              => 2,
+                    'MAX'                 => 0,
+                    'PRESENTATION'        => VARIABLE_PRESENTATION_VALUE_PRESENTATION,
+                    'INTERVALS'           => '[]',
+                    'INTERVALS_ACTIVE'    => false,
+                    'PERCENTAGE'          => false,
+                    'PREFIX'              => '',
+                    'SUFFIX'              => ' A',
+                    'THOUSANDS_SEPARATOR' => 'Client',
+                    'USAGE_TYPE'          => 0
+                ],
+                0.01
+            ],
+            self::PowerFactor => [
+                'Power factor',
+                VARIABLETYPE_FLOAT,
+                [
+                    'MIN'              => 0,
+                    'DIGITS'           => 1,
+                    'MULTILINE'        => false,
+                    'ICON'             => 'Gauge',
+                    'MAX'              => 100,
+                    'PRESENTATION'     => VARIABLE_PRESENTATION_VALUE_PRESENTATION,
+                    'INTERVALS'        => '[]',
+                    'INTERVALS_ACTIVE' => false,
+                    'PERCENTAGE'       => true,
+                    'PREFIX'           => '',
+                    'SUFFIX'           => ' %',
+                    'USAGE_TYPE'       => 0
+                ],
+                0.1
+            ],
+            self::Temp        => [
+                'Temperature',
+                VARIABLETYPE_FLOAT,
+                [
+                    'PRESENTATION' => VARIABLE_PRESENTATION_VALUE_PRESENTATION,
+                    'TEMPLATE'     => VARIABLE_TEMPLATE_VALUE_PRESENTATION_ROOM_TEMPERATURE
+                ],
+                0.1
+            ],
+            self::Link        => [
+                'Link',
+                VARIABLETYPE_BOOLEAN,
+                [
+                    'MIN'              => 0,
+                    'DIGITS'           => 0,
+                    'MULTILINE'        => false,
+                    'ICON'             => 'Warning',
+                    'INTERVALS_ACTIVE' => true,
+                    'MAX'              => 1,
+                    'PRESENTATION'     => VARIABLE_PRESENTATION_VALUE_PRESENTATION,
+                    'PERCENTAGE'       => false,
+                    'OPTIONS'          => '[{"Value":false,"Caption":"Alarm","IconActive":false,"IconValue":"","ColorActive":true,"ColorValue":16711680},{"Value":true,"Caption":"OK","IconActive":false,"IconValue":"","ColorActive":true,"ColorValue":-1}]',
+                    'PREFIX'           => '',
+                    'SUFFIX'           => '',
+                    'USAGE_TYPE'       => 0,
+                ]
+            ],
+            self::PowerLimit  => [
+                'Power Limit',
+                VARIABLETYPE_INTEGER,
+                [
+                    'MIN'              => 0,
+                    'DIGITS'           => 0,
+                    'CUSTOM_GRADIENT'  => '[]',
+                    'GRADIENT_TYPE'    => 0,
+                    'ICON'             => 'Intensity',
+                    'MAX'              => 100,
+                    'PRESENTATION'     => VARIABLE_PRESENTATION_SLIDER,
+                    'INTERVALS'        => '[]',
+                    'INTERVALS_ACTIVE' => false,
+                    'PERCENTAGE'       => true,
+                    'PREFIX'           => '',
+                    'STEP_SIZE'        => 1,
+                    'SUFFIX'           => ' %',
+                    'USAGE_TYPE'       => 2,
+                ],
+                0.1,
+                true
+            ],
         ];
     }
 
@@ -116,11 +263,75 @@ namespace HoymilesWiFi\SolarPort{
         public const EnergyDaily = 'ed'; // Wh
 
         public static $Vars = [
-            self::Voltage            => ['Voltage', VARIABLETYPE_FLOAT, '~Volt.230', 0.1],
-            self::Current            => ['Current', VARIABLETYPE_FLOAT, '~Ampere', 0.01],
-            self::Power              => ['Power', VARIABLETYPE_FLOAT, '~Watt', 0.1],
-            self::EnergyTotal        => ['Energy total', VARIABLETYPE_FLOAT, '~Electricity.Wh', 1],
-            self::EnergyDaily        => ['Energy daily', VARIABLETYPE_FLOAT, '~Electricity.Wh', 1],
+            self::Voltage => [
+                'Voltage',
+                VARIABLETYPE_FLOAT,
+                [
+                    'ICON'                => 'bolt',
+                    'DECIMAL_SEPARATOR'   => 'Client',
+                    'COLOR'               => -1,
+                    'MIN'                 => 0,
+                    'DIGITS'              => 1,
+                    'MAX'                 => 0,
+                    'PRESENTATION'        => VARIABLE_PRESENTATION_VALUE_PRESENTATION,
+                    'INTERVALS'           => '[]',
+                    'INTERVALS_ACTIVE'    => false,
+                    'PERCENTAGE'          => false,
+                    'PREFIX'              => '',
+                    'SUFFIX'              => ' V',
+                    'THOUSANDS_SEPARATOR' => 'Client',
+                    'USAGE_TYPE'          => 0
+                ],
+                0.1
+            ],
+            self::Current => [
+                'Current',
+                VARIABLETYPE_FLOAT,
+                [
+                    'ICON'                => 'bolt',
+                    'DECIMAL_SEPARATOR'   => 'Client',
+                    'COLOR'               => -1,
+                    'MIN'                 => 0,
+                    'DIGITS'              => 2,
+                    'MAX'                 => 0,
+                    'PRESENTATION'        => VARIABLE_PRESENTATION_VALUE_PRESENTATION,
+                    'INTERVALS'           => '[]',
+                    'INTERVALS_ACTIVE'    => false,
+                    'PERCENTAGE'          => false,
+                    'PREFIX'              => '',
+                    'SUFFIX'              => ' A',
+                    'THOUSANDS_SEPARATOR' => 'Client',
+                    'USAGE_TYPE'          => 0
+                ],
+                0.01
+            ],
+            self::Power => [
+                'Power',
+                VARIABLETYPE_FLOAT,
+                [
+                    'PRESENTATION' => VARIABLE_PRESENTATION_VALUE_PRESENTATION,
+                    'TEMPLATE'     => VARIABLE_TEMPLATE_VALUE_PRESENTATION_POWER
+                ],
+                0.1
+            ],
+            self::EnergyTotal => [
+                'Energy total',
+                VARIABLETYPE_FLOAT,
+                [
+                    'PRESENTATION' => VARIABLE_PRESENTATION_VALUE_PRESENTATION,
+                    'TEMPLATE'     => VARIABLE_TEMPLATE_VALUE_PRESENTATION_ENERGY
+                ],
+                1
+            ],
+            self::EnergyDaily => [
+                'Energy daily',
+                VARIABLETYPE_FLOAT,
+                [
+                    'PRESENTATION' => VARIABLE_PRESENTATION_VALUE_PRESENTATION,
+                    'TEMPLATE'     => VARIABLE_TEMPLATE_VALUE_PRESENTATION_ENERGY
+                ],
+                1
+            ]
         ];
     }
 }
@@ -134,9 +345,33 @@ namespace HoymilesWiFi\DTU{
         public const DailyYield = 'pvDailyYield'; // Wh
 
         public static $Vars = [
-            self::Time         => ['Time', VARIABLETYPE_INTEGER, '~UnixTimestamp'],
-            self::CurrentPower => ['Power', VARIABLETYPE_FLOAT, '~Watt', 0.1],
-            self::DailyYield   => ['Energy daily', VARIABLETYPE_FLOAT, '~Electricity.Wh', 1],
+            self::Time         => [
+                'Time',
+                VARIABLETYPE_INTEGER,
+                [
+                    'PRESENTATION' => VARIABLE_PRESENTATION_DATE_TIME,
+                    'TEMPLATE'     => VARIABLE_TEMPLATE_DATE_TIME,
+                ]
+            ],
+            self::CurrentPower => [
+                'Power',
+                VARIABLETYPE_FLOAT,
+                [
+                    'PRESENTATION' => VARIABLE_PRESENTATION_VALUE_PRESENTATION,
+                    'TEMPLATE'     => VARIABLE_TEMPLATE_VALUE_PRESENTATION_POWER
+                ],
+                0.1
+            ],
+            self::DailyYield   => [
+                'Energy daily',
+                VARIABLETYPE_FLOAT,
+                [
+                    'PRESENTATION' => VARIABLE_PRESENTATION_VALUE_PRESENTATION,
+                    'TEMPLATE'     => VARIABLE_TEMPLATE_VALUE_PRESENTATION_ENERGY
+                ],
+                1
+            ]
+
         ];
     }
 }

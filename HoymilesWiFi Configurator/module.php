@@ -17,7 +17,6 @@ class HoymilesWiFiConfigurator extends IPSModuleStrict
     public function Create(): void
     {
         parent::Create();
-        $this->ConnectParent(\HoymilesWiFi\GUID::IO);
     }
 
     public function ApplyChanges(): void
