@@ -1,5 +1,5 @@
 [![SDK](https://img.shields.io/badge/Symcon-PHPModul-red.svg)](https://www.symcon.de/service/dokumentation/entwicklerbereich/sdk-tools/sdk-php/)
-[![Version](https://img.shields.io/badge/Modul%20version-1.20-blue.svg)](https://community.symcon.de/t/modul-hoymiles-wifi-series-beta/135536/)
+[![Version](https://img.shields.io/badge/Modul%20version-1.21-blue.svg)](https://community.symcon.de/t/modul-hoymiles-wifi-series-beta/135536/)
 [![Version](https://img.shields.io/badge/Symcon%20Version-8.1%20%3E-green.svg)](https://www.symcon.de/de/service/dokumentation/installation/migrationen/v80-v81-q3-2025/)  
 [![License](https://img.shields.io/badge/License-CC%20BY--NC--SA%204.0-green.svg)](https://creativecommons.org/licenses/by-nc-sa/4.0/)
 [![Check Style](https://github.com/Nall-chan/HoymilesWiFi/workflows/Check%20Style/badge.svg)](https://github.com/Nall-chan/HoymilesWiFi/actions) [![Run Tests](https://github.com/Nall-chan/HoymilesWiFi/workflows/Run%20Tests/badge.svg)](https://github.com/Nall-chan/HoymilesWiFi/actions)  
@@ -47,18 +47,21 @@ Es wird empfohlen eine Instanz des [Configurator-Moduls](../HoymilesWiFi%20Confi
 
 __Konfigurationsseite__:
 
-| Name                    | Typ     | Standardwert | Beschreibung                                               |
-| ----------------------- | ------- | :----------: | ---------------------------------------------------------- |
-| Open                    | boolean |    false     | Verbindung herstellen                                      |
-| Host                    | string  |              | IP Adresse des Wechselrichters                             |
-| Port                    | integer |    10081     | TCP Port für die Kommunikation                             |
-| RequestInterval         | integer |      60      | Abfrageintervall in Sekunden                               |
-| SuppressConnectionError | boolean |     true     | Fehlermeldungen unterdrücken wenn WR nicht erreichbar (*1) |
-| StartVariableId         | integer |      1       | VariableId zum beenden des Schlafmodus                     |
-| StopVariableId          | integer |      1       | VariableId zum starten des Schlafmodus                     |
-| DayValue                | string  |              | Vergleichswert (JSON-Kodiert) zum beenden des Schlafmodus  |
-| NightValue              | string  |              | Vergleichswert (JSON-Kodiert) zum starten des Schlafmodus  |
-(*1) siehe Schlafmodus
+| Name                    | Typ     | Standardwert | Beschreibung                                              |
+| ----------------------- | ------- | :----------: | --------------------------------------------------------- |
+| Open                    | boolean |    false     | Verbindung herstellen                                     |
+| Host                    | string  |              | IP Adresse des Wechselrichters                            |
+| Port                    | integer |    10081     | TCP Port für die Kommunikation                            |
+| RequestInterval         | integer |      60      | Abfrageintervall in Sekunden                              |
+| SuppressConnectionError | boolean |     true     | Fehlermeldungen unterdrücken wenn WR nicht erreichbar     |
+| WatchdogType            | integer |      0       | 0: kein, 1:Variablen, 2:Ping, 3:Bedingung                 |
+| WatchdogInterval        | integer |      0       | Intervall in welchen der Watchdog arbeitet                |
+| WatchdogCondition       | string  |              | JSON kodierte Bedingung                                   |
+| StartVariableId         | integer |      1       | VariableId zum beenden des Schlafmodus                    |
+| StopVariableId          | integer |      1       | VariableId zum starten des Schlafmodus                    |
+| DayValue                | string  |              | Vergleichswert (JSON-Kodiert) zum beenden des Schlafmodus |
+| NightValue              | string  |              | Vergleichswert (JSON-Kodiert) zum starten des Schlafmodus |
+
 
 ![Konfiguration](imgs/config.png)  
 
@@ -67,28 +70,34 @@ __Konfigurationsseite__:
 
 __Schlafmodus__:
 
-Die Wechselrichter schalten sich bei Dunkelheit automatisch ab; um Fehlermeldungen in Symcon zu vermeiden, ist per default die Option `Fehlermeldungen unterdrücken` aktiv.  
-Hierdurch können dann aber keine defekten Verbindungen mehr erkannt werden.  
+Die Wechselrichter schalten sich bei Dunkelheit automatisch ab; um Fehlermeldungen im Logfile zu vermeiden, ist per default die Option `Fehlermeldungen unterdrücken` aktiv.  
+**Hierdurch können dann aber keine defekten Verbindungen bzw. ein Ausfall mehr erkannt werden.**  
 
-Alternativ kann er Schlafmodus der Instanz genutzt werden, um die Abfrage des Nachts zu pausieren.  
+Alternativ oder auch zusätzlich kann er Watchdog genutzt werden, um die Abfrage des Nachts zu pausieren.  
 Hierfür gibt es folgende Möglichkeiten:
 1. Location Control mit den Variablen für Sonnenauf- und Untergang
 2. Beliebige Integer Variablen mit dem Profil `~UnixTmestemp`  
-3. Beliebige Variablen mit Vergleichswert  
-4. Aktionen, welche in beliebigen Ereignissen oder Ablaufplänen genutzt werden können  
-5. Instanz-Funktionen `HMSWIFI_SetInactive` und `HMSWIFI_SetActive`
+3. Beliebige Variablen mit Vergleichswert für Start und Ende
+4. Start und Ende wird per Netzwerk-Ping ermittel  
+5. Start und Ende werden über eine Bedingung definiert  
+6. Aktionen, welche in beliebigen Ereignissen oder Ablaufplänen genutzt werden können  
+7. Instanz-Funktionen `HMSWIFI_SetInactive` und `HMSWIFI_SetActive`
 
 **Varianten:**  
  1. Auswahl des Location Control, die Variablen für Schlafende und Start werden automatisch übernommen.  
  Der Vergleich erfolgt mit der aktuellen Uhrzeit.
+ ![Konfiguration](imgs/config_location.png)  
  2. Bei den Variablen für Schlafende und Start wurden Variablen mit dem Profil `~UnixTmestemp` ausgewählt.  
  Der Vergleich erfolgt mit der aktuellen Uhrzeit.
  3. Bei den Variablen für Schlafende und Start wurden Variablen mit **einem anderen Profil** als `~UnixTmestemp` ausgewählt.  
  Für den Vergleich müssen jeweils die Vergleichswerte eingestellt werden, welche für den Vergleich genutzt werden.  
- 4. Es existieren zwei Aktionen um den Schlafmodus zu aktiveren oder deaktivieren.  
+ ![Konfiguration](imgs/config_values.png)  
+ 4. Sobald der Wechselrichter nicht erreichbar ist, wird in den eingestellten WatchdogInterval ein Netzwerk-Ping gesendet und damit der Wechsel auf Tag erkannt.  
+ 5. Sobald der Wechselrichter nicht erreichbar ist, wird in den eingestellten WatchdogInterval die konfiguriere Bedinung geprüft und bei Erfolg der Wechsel auf Tag angenommen.  
+ ![Konfiguration](imgs/config_condition.png)  
+ 6. Es existieren zwei Aktionen um den Schlafmodus zu aktiveren oder deaktivieren.  
  ![Actions](imgs/actions.png) 
- 5. Über PHP-Scripte kann die Instanz mit den Befehlen `HMSWIFI_SetInactive` und `HMSWIFI_SetActive` Inaktiv und Aktiv geschaltet werden.  
-
+ 1. Über PHP-Scripte kann die Instanz mit den Befehlen `HMSWIFI_SetInactive` und `HMSWIFI_SetActive` Inaktiv und Aktiv geschaltet werden.  
 
 ## 5. Statusvariablen
 

@@ -76,6 +76,11 @@ class HoymilesWiFiIO extends IPSModuleStrict
     use \HoymilesIO\Semaphore;
     use \HoymilesIO\BufferHelper;
 
+    /**
+     * Create
+     *
+     * @return void
+     */
     public function Create(): void
     {
         parent::Create();
@@ -91,24 +96,48 @@ class HoymilesWiFiIO extends IPSModuleStrict
         $this->RegisterPropertyInteger(\HoymilesWiFi\IO\Property::Port, 10081);
         $this->RegisterPropertyInteger(\HoymilesWiFi\IO\Property::RequestInterval, 60);
         $this->RegisterPropertyBoolean(\HoymilesWiFi\IO\Property::SuppressConnectionError, true);
+        $this->RegisterPropertyInteger(\HoymilesWiFi\IO\Property::WatchdogType, \HoymilesWiFi\io\WatchdogType::NONE);
         $this->RegisterPropertyInteger(\HoymilesWiFi\IO\Property::LocationId, 1);
         $this->RegisterPropertyInteger(\HoymilesWiFi\IO\Property::StartVariableId, 1);
         $this->RegisterPropertyInteger(\HoymilesWiFi\IO\Property::StopVariableId, 1);
         $this->RegisterPropertyString(\HoymilesWiFi\IO\Property::DayValue, '""');
         $this->RegisterPropertyString(\HoymilesWiFi\IO\Property::NightValue, '""');
+        $this->RegisterPropertyInteger(\HoymilesWiFi\IO\Property::WatchdogInterval, 0);
+        $this->RegisterPropertyString(\HoymilesWiFi\IO\Property::WatchdogCondition, '');
         $this->RegisterAttributeInteger(\HoymilesWiFi\IO\Attribute::LastState, IS_CREATING);
+        $this->RegisterTimer(\HoymilesWiFi\IO\Timer::Watchdog, 0, 'IPS_RequestAction(' . $this->InstanceID . ',"' . \HoymilesWiFi\IO\Timer::Watchdog . '",true);');
         $this->RegisterTimer(\HoymilesWiFi\IO\Timer::RequestState, 0, 'IPS_RequestAction(' . $this->InstanceID . ',"' . \HoymilesWiFi\IO\Timer::RequestState . '",true);');
     }
 
-    public function Destroy(): void
+    /**
+     * Migrate
+     *
+     * @param  string $JSONData
+     * @return string
+     */
+    public function Migrate(string $JSONData): string
     {
-        parent::Destroy();
+        $Data = json_decode($JSONData);
+        if (!property_exists($Data->configuration, \HoymilesWiFi\IO\Property::WatchdogType)) {
+            $Data->configuration->WatchdogType = \HoymilesWiFi\IO\WatchdogType::NONE;
+            if (($Data->configuration->StartVariableId > 1) && ($Data->configuration->StopVariableId > 1)) {
+                $Data->configuration->WatchdogType = \HoymilesWiFi\IO\WatchdogType::TIME_OR_VALUES;
+            }
+        }
+        return json_encode($Data);
     }
 
+    /**
+     * ApplyChanges
+     *
+     * @return void
+     */
     public function ApplyChanges(): void
     {
         $this->UnregisterVariableWatch($this->DayVariableId);
         $this->UnregisterVariableWatch($this->NightVariableId);
+        $this->SetTimerInterval(\HoymilesWiFi\IO\Timer::RequestState, 0);
+        $this->SetTimerInterval(\HoymilesWiFi\IO\Timer::Watchdog, 0);
         $this->Sequenz = 0;
         $this->DayVariableIsTimeStamp = false;
         $this->NightVariableIsTimeStamp = false;
@@ -125,37 +154,52 @@ class HoymilesWiFiIO extends IPSModuleStrict
             $this->SetStatus(IS_INACTIVE);
             return;
         }
-        if ($this->ReadPropertyBoolean(\HoymilesWiFi\IO\Property::Active)) {
-            $this->DayVariableId = $this->ReadPropertyInteger(\HoymilesWiFi\IO\Property::StartVariableId);
-            $this->NightVariableId = $this->ReadPropertyInteger(\HoymilesWiFi\IO\Property::StopVariableId);
-            $this->RegisterVariableWatch($this->DayVariableId);
-            $this->RegisterVariableWatch($this->NightVariableId);
-            if (($this->DayVariableId > 1) && ($this->DayVariableId > 1)) {
-                $this->SendDebug(__FUNCTION__, 'Day & Night are set', 0);
-                if (!IPS_VariableExists($this->NightVariableId)) {
-                    $this->SendDebug(__FUNCTION__, 'Night INVALID', 0);
-                    $this->SetStatus(IS_EBASE + 1);
-                    return;
-                }
-                if (!IPS_VariableExists($this->DayVariableId)) {
-                    $this->SendDebug(__FUNCTION__, 'Day INVALID', 0);
-                    $this->SetStatus(IS_EBASE + 1);
-                    return;
-                }
-                $this->NightVariableIsTimeStamp = $this->VariableIsTimestamp($this->NightVariableId);
-                $this->DayVariableIsTimeStamp = $this->VariableIsTimestamp($this->DayVariableId);
-                if ($this->DayVariableIsTimeStamp) {
-                    $this->DayNightCheck(GetValue($this->DayVariableId), GetValue($this->NightVariableId));
-                } else {
-                    if (!$this->DayCheck(GetValue($this->DayVariableId))) {
-                        $this->StartWithLastStateCheck();
-                    }
-                }
-            } else {
-                $this->StartWithLastStateCheck();
-            }
-        } else {
+        if (!$this->ReadPropertyBoolean(\HoymilesWiFi\IO\Property::Active)) {
             $this->SetStatus(IS_INACTIVE);
+            return;
+        }
+        $WatchdogType = $this->ReadPropertyInteger(\HoymilesWiFi\IO\Property::WatchdogType);
+        switch ($WatchdogType) {
+            case \HoymilesWiFi\IO\WatchdogType::NONE:
+                $this->SetActive();
+                break;
+            case \HoymilesWiFi\IO\WatchdogType::TIME_OR_VALUES:
+                $this->DayVariableId = $this->ReadPropertyInteger(\HoymilesWiFi\IO\Property::StartVariableId);
+                $this->NightVariableId = $this->ReadPropertyInteger(\HoymilesWiFi\IO\Property::StopVariableId);
+                $this->RegisterVariableWatch($this->DayVariableId);
+                $this->RegisterVariableWatch($this->NightVariableId);
+                if (($this->DayVariableId > 1) && ($this->DayVariableId > 1)) {
+                    $this->SendDebug(__FUNCTION__, 'Day & Night are set', 0);
+                    if (!IPS_VariableExists($this->NightVariableId)) {
+                        $this->SendDebug(__FUNCTION__, 'Night INVALID', 0);
+                        $this->SetStatus(IS_EBASE + 1);
+                        return;
+                    }
+                    if (!IPS_VariableExists($this->DayVariableId)) {
+                        $this->SendDebug(__FUNCTION__, 'Day INVALID', 0);
+                        $this->SetStatus(IS_EBASE + 1);
+                        return;
+                    }
+                    $this->NightVariableIsTimeStamp = $this->VariableIsTimestamp($this->NightVariableId);
+                    $this->DayVariableIsTimeStamp = $this->VariableIsTimestamp($this->DayVariableId);
+                    if ($this->DayVariableIsTimeStamp) {
+                        $this->DayNightCheck(GetValue($this->DayVariableId), GetValue($this->NightVariableId));
+                    } else {
+                        if (!$this->DayCheck(GetValue($this->DayVariableId))) {
+                            $this->StartWithLastStateCheck();
+                        }
+                    }
+                    return;
+                }
+                $this->SetStatus(IS_EBASE + 1);
+                break;
+            default:
+                if ($this->CheckCondition()) {
+                    $this->SetActive();
+                } else {
+                    $this->SetInActive();
+                }
+                break;
         }
     }
 
@@ -169,8 +213,9 @@ class HoymilesWiFiIO extends IPSModuleStrict
         }
         if ($this->RealDataResDTO()) {
             $this->SetStatus(IS_ACTIVE);
+            return true;
         }
-        return true;
+        return false;
     }
 
     public function SetInactive(): bool
@@ -232,12 +277,21 @@ class HoymilesWiFiIO extends IPSModuleStrict
             case \HoymilesWiFi\IO\Timer::RequestState:
                 $this->RequestState();
                 return;
+            case \HoymilesWiFi\IO\Timer::Watchdog:
+                if ($this->CheckCondition()) {
+                    $this->SetTimerInterval(\HoymilesWiFi\IO\Timer::Watchdog, 0);
+                    $this->SetActive();
+                }
+                return;
+            case \HoymilesWiFi\IO\Property::WatchdogType:
+                $this->FormUpdateByWatchdogType($Value);
+                return;
             case \HoymilesWiFi\IO\Property::LocationId:
-                $this->UpdateNightObjectForm($Value);
+                $this->FormUpdateBySelectLocationControl($Value);
                 return;
             case \HoymilesWiFi\IO\Property::DayValue:
             case \HoymilesWiFi\IO\Property::NightValue:
-                $this->UpdateDayNightVariables($Value, $Ident);
+                $this->FormUpdateByDayOrNightVariable($Value, $Ident);
                 return;
         }
     }
@@ -248,47 +302,31 @@ class HoymilesWiFiIO extends IPSModuleStrict
         if ($this->GetStatus() == IS_CREATING) {
             return json_encode($Form);
         }
-
-        $StartVariableId = $this->ReadPropertyInteger(\HoymilesWiFi\IO\Property::StartVariableId);
-        if ($StartVariableId < 10000) {
-            $StartVariableId = false;
-        } else {
-            if (IPS_VariableExists($StartVariableId)) {
-                if ($this->VariableIsTimestamp($StartVariableId)) {
-                    $StartVariableId = false;
+        $WatchdogType = $this->ReadPropertyInteger(\HoymilesWiFi\IO\Property::WatchdogType);
+        switch ($WatchdogType) {
+            case \HoymilesWiFi\IO\WatchdogType::NONE:
+                break;
+            case \HoymilesWiFi\IO\WatchdogType::TIME_OR_VALUES:
+                $Form['elements'][2]['items'][0]['items'][1]['visible'] = true;
+                $StartVariableId = $this->ReadPropertyInteger(\HoymilesWiFi\IO\Property::StartVariableId);
+                $Form['elements'][2]['items'][0]['items'][1]['popup']['items'][1]['items'][1]['variableID'] = $StartVariableId;
+                if (IPS_VariableExists($StartVariableId) && !$this->VariableIsTimestamp($StartVariableId)) {
+                    $Form['elements'][2]['items'][0]['items'][1]['popup']['items'][1]['items'][1]['visible'] = true;
                 }
-            } else {
-                $StartVariableId = false;
-            }
-        }
-        if ($StartVariableId) {
-            $Form['elements'][3]['items'][1]['variableID'] = $StartVariableId;
-        } else {
-            $Form['elements'][3]['items'][1]['variableID'] = 1;
-            $Form['elements'][3]['items'][1]['value'] = '""';
-            $Form['elements'][3]['items'][1]['visible'] = false;
-        }
-
-        $StopVariableId = $this->ReadPropertyInteger(\HoymilesWiFi\IO\Property::StopVariableId);
-
-        if ($StopVariableId < 10000) {
-            $StopVariableId = false;
-        } else {
-            if (IPS_VariableExists($StopVariableId)) {
-                if ($this->VariableIsTimestamp($StopVariableId)) {
-                    $StopVariableId = false;
+                $StopVariableId = $this->ReadPropertyInteger(\HoymilesWiFi\IO\Property::StopVariableId);
+                $Form['elements'][2]['items'][0]['items'][1]['popup']['items'][2]['items'][1]['variableID'] = $StopVariableId;
+                if (IPS_VariableExists($StopVariableId) && !$this->VariableIsTimestamp($StopVariableId)) {
+                    $Form['elements'][2]['items'][0]['items'][1]['popup']['items'][2]['items'][1]['visible'] = true;
                 }
-            } else {
-                $StopVariableId = false;
-            }
-        }
+                break;
+            case \HoymilesWiFi\IO\WatchdogType::PING:
+                $Form['elements'][2]['items'][0]['items'][2]['visible'] = true;
+                break;
+            case \HoymilesWiFi\IO\WatchdogType::CONDITION:
+                $Form['elements'][2]['items'][0]['items'][2]['visible'] = true;
+                $Form['elements'][2]['items'][0]['items'][2]['popup']['items'][0]['items'][1]['visible'] = true;
 
-        if ($StopVariableId) {
-            $Form['elements'][4]['items'][1]['variableID'] = $StopVariableId;
-        } else {
-            $Form['elements'][4]['items'][1]['variableID'] = 1;
-            $Form['elements'][4]['items'][1]['value'] = '""';
-            $Form['elements'][4]['items'][1]['visible'] = false;
+                break;
         }
         $this->SendDebug('FORM', json_encode($Form), 0);
         $this->SendDebug('FORM', json_last_error_msg(), 0);
@@ -478,6 +516,7 @@ class HoymilesWiFiIO extends IPSModuleStrict
     protected function KernelReady(): void
     {
         $this->ApplyChanges();
+        $this->StartWithLastStateCheck();
     }
 
     protected function SetStatus(int $NewState): bool
@@ -496,6 +535,9 @@ class HoymilesWiFiIO extends IPSModuleStrict
                 // No break. Add additional comment above this line if intentional
             default:
                 $this->SetTimerInterval(\HoymilesWiFi\IO\Timer::RequestState, 0);
+                if ($this->ReadPropertyInteger(\HoymilesWiFi\IO\Property::WatchdogType) >= \HoymilesWiFi\IO\WatchdogType::PING) {
+                    $this->SetTimerInterval(\HoymilesWiFi\IO\Timer::Watchdog, $this->ReadPropertyInteger(\HoymilesWiFi\IO\Property::WatchdogInterval) * 1000);
+                }
                 break;
         }
         parent::SetStatus($NewState);
@@ -518,8 +560,31 @@ class HoymilesWiFiIO extends IPSModuleStrict
             $this->RegisterReference($VarId);
         }
     }
+    private function FormUpdateByWatchdogType(int $WatchdogType): void
+    {
+        switch ($WatchdogType) {
+            case \HoymilesWiFi\IO\WatchdogType::NONE:
+                $this->UpdateFormField('TimePopup', 'visible', false);
+                $this->UpdateFormField('ConditionPopup', 'visible', false);
+                break;
+            case \HoymilesWiFi\IO\WatchdogType::TIME_OR_VALUES:
+                $this->UpdateFormField('TimePopup', 'visible', true);
+                $this->UpdateFormField('ConditionPopup', 'visible', false);
+                break;
+            case \HoymilesWiFi\IO\WatchdogType::PING:
+                $this->UpdateFormField('TimePopup', 'visible', false);
+                $this->UpdateFormField('ConditionPopup', 'visible', true);
+                $this->UpdateFormField('WatchdogCondition', 'visible', false);
+                break;
+            case \HoymilesWiFi\IO\WatchdogType::CONDITION:
+                $this->UpdateFormField('TimePopup', 'visible', false);
+                $this->UpdateFormField('ConditionPopup', 'visible', true);
+                $this->UpdateFormField('WatchdogCondition', 'visible', true);
+                break;
 
-    private function UpdateDayNightVariables(int $VariableId, string $Property): void
+        }
+    }
+    private function FormUpdateByDayOrNightVariable(int $VariableId, string $Property): void
     {
         if ($VariableId < 10000) {
             $this->UpdateFormField($Property, 'variableID', 1);
@@ -551,7 +616,7 @@ class HoymilesWiFiIO extends IPSModuleStrict
         }
     }
 
-    private function UpdateNightObjectForm(int $LocationId): void
+    private function FormUpdateBySelectLocationControl(int $LocationId): void
     {
         if ($LocationId < 10000) {
             $this->UpdateFormField('StartVariableId', 'value', 0);
@@ -569,7 +634,11 @@ class HoymilesWiFiIO extends IPSModuleStrict
             return;
         }
         $this->UpdateFormField('StartVariableId', 'value', IPS_GetObjectIDByIdent('Sunrise', $LocationId));
+        $this->UpdateFormField('DayValue', 'visible', false);
+        $this->UpdateFormField('DayValue', 'value', '""');
         $this->UpdateFormField('StopVariableId', 'value', IPS_GetObjectIDByIdent('Sunset', $LocationId));
+        $this->UpdateFormField('NightValue', 'visible', false);
+        $this->UpdateFormField('NightValue', 'value', '""');
     }
 
     private function StartWithLastStateCheck()
@@ -578,6 +647,20 @@ class HoymilesWiFiIO extends IPSModuleStrict
         if ($this->ReadAttributeInteger(\HoymilesWiFi\IO\Attribute::LastState) != IS_INACTIVE) {
             $this->SetActive();
         }
+    }
+    private function CheckCondition(): bool
+    {
+        switch ($this->ReadPropertyInteger(\HoymilesWiFi\IO\Property::WatchdogType)) {
+            case \HoymilesWiFi\IO\WatchdogType::PING:
+                $Result = @Sys_Ping($this->ReadPropertyString(\HoymilesWiFi\IO\Property::Host), 500);
+                $this->SendDebug('Pinging', $Result, 0);
+                return $Result;
+            case \HoymilesWiFi\IO\WatchdogType::CONDITION:
+                $Result = IPS_IsConditionPassing($this->ReadPropertyString(\HoymilesWiFi\IO\Property::WatchdogCondition));
+                $this->SendDebug('CheckCondition', $Result, 0);
+                return $Result;
+        }
+        return true;
     }
 
     private function DayNightCheck(mixed $ValueDay, mixed $ValueNight): void
@@ -620,23 +703,30 @@ class HoymilesWiFiIO extends IPSModuleStrict
 
     private function VariableIsTimestamp(int $VariableId): bool
     {
-        $Variable = IPS_GetVariable($this->NightVariableId);
-        if ($Variable['VariablePresentation']['PRESENTATION'] == VARIABLE_PRESENTATION_LEGACY) {
-            if ($Variable['VariablePresentation']['PROFILE'] == '~UnixTimestamp') {
+        $Variable = IPS_GetVariable($VariableId);
+        if (isset($Variable['VariableCustomPresentation']['PRESENTATION'])) {
+            if ($Variable['VariableCustomPresentation']['PRESENTATION'] == VARIABLE_PRESENTATION_DATE_TIME) {
                 return true;
             }
-        }
-        if ($Variable['VariableCustomPresentation']['PRESENTATION'] == VARIABLE_PRESENTATION_LEGACY) {
-            if ($Variable['VariableCustomPresentation']['PROFILE'] == '~UnixTimestamp') {
-                return true;
+            if ($Variable['VariableCustomPresentation']['PRESENTATION'] == VARIABLE_PRESENTATION_LEGACY) {
+                if ($Variable['VariableCustomPresentation']['PROFILE'] == '~UnixTimestamp') {
+                    return true;
+                }
             }
         }
-        if ($Variable['VariablePresentation']['PRESENTATION'] == VARIABLE_PRESENTATION_DATE_TIME) {
-            return true;
+
+        if (isset($Variable['VariablePresentation']['PRESENTATION'])) {
+            if ($Variable['VariablePresentation']['PRESENTATION'] == VARIABLE_PRESENTATION_DATE_TIME) {
+                return true;
+            }
+            if ($Variable['VariablePresentation']['PRESENTATION'] == VARIABLE_PRESENTATION_LEGACY) {
+                $Variable['VariablePresentation']['PROFILE'] = $Variable['VariablePresentation']['PROFILE'] ?? '';
+                if ($Variable['VariablePresentation']['PROFILE'] == '~UnixTimestamp') {
+                    return true;
+                }
+            }
         }
-        if ($Variable['VariableCustomPresentation']['PRESENTATION'] == VARIABLE_PRESENTATION_DATE_TIME) {
-            return true;
-        }
+
         return false;
     }
     private function RealDataResDTO(): bool
@@ -722,7 +812,11 @@ class HoymilesWiFiIO extends IPSModuleStrict
             $this->SendDebug('ERROR (' . $errno . ')', $errstr, 0);
             if ($TriggerError) {
                 trigger_error($this->Translate('Error on connect') . '(' . $errno . ') ' . $errstr, E_USER_NOTICE);
+            }
+            if ($this->CheckCondition()) {
                 $this->SetStatus(IS_EBASE + 2);
+            } else {
+                $this->SetInactive();
             }
             return false;
         } else {
@@ -734,7 +828,11 @@ class HoymilesWiFiIO extends IPSModuleStrict
                     @fclose($fp);
                     if ($TriggerError) {
                         trigger_error($this->Translate('Error on write') . '(' . $errno . ') ' . $errstr, E_USER_NOTICE);
+                    }
+                    if ($this->CheckCondition()) {
                         $this->SetStatus(IS_EBASE + 2);
+                    } else {
+                        $this->SetInactive();
                     }
                     return false;
                 }
@@ -747,7 +845,11 @@ class HoymilesWiFiIO extends IPSModuleStrict
             $this->SendDebug('ERROR (0)', 'Timeout', 0);
             if ($TriggerError) {
                 trigger_error($this->Translate('Timeout'), E_USER_NOTICE);
+            }
+            if ($this->CheckCondition()) {
                 $this->SetStatus(IS_EBASE + 2);
+            } else {
+                $this->SetInactive();
             }
             return false;
         }

@@ -33,13 +33,23 @@ namespace HoymilesWiFi\IO{
         public const Port = 'Port';
         public const RequestInterval = 'RequestInterval';
         public const SuppressConnectionError = 'SuppressConnectionError';
+        public const WatchdogType = 'WatchdogType';
         public const LocationId = 'LocationId';
         public const StartVariableId = 'StartVariableId';
         public const StopVariableId = 'StopVariableId';
         public const DayValue = 'DayValue';
         public const NightValue = 'NightValue';
+        public const WatchdogInterval = 'WatchdogInterval';
+        public const WatchdogCondition = 'WatchdogCondition';
     }
+    class WatchdogType
+    {
+        public const NONE = 0;
+        public const TIME_OR_VALUES = 1;
+        public const PING = 2;
+        public const CONDITION = 3;
 
+    }
     class Attribute
     {
         public const LastState = 'LastState';
@@ -48,6 +58,7 @@ namespace HoymilesWiFi\IO{
     class Timer
     {
         public const RequestState = 'RequestState';
+        public const Watchdog = 'Watchdog';
     }
 
     class InstanceStatus

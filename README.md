@@ -1,5 +1,5 @@
 [![SDK](https://img.shields.io/badge/Symcon-PHPModul-red.svg)](https://www.symcon.de/service/dokumentation/entwicklerbereich/sdk-tools/sdk-php/)
-[![Version](https://img.shields.io/badge/Modul%20version-1.20-blue.svg)](https://community.symcon.de/t/modul-hoymiles-wifi-series-beta/135536/)
+[![Version](https://img.shields.io/badge/Modul%20version-1.21-blue.svg)](https://community.symcon.de/t/modul-hoymiles-wifi-series-beta/135536/)
 [![Version](https://img.shields.io/badge/Symcon%20Version-8.1%20%3E-green.svg)](https://www.symcon.de/de/service/dokumentation/installation/migrationen/v80-v81-q3-2025/)  
 [![License](https://img.shields.io/badge/License-CC%20BY--NC--SA%204.0-green.svg)](https://creativecommons.org/licenses/by-nc-sa/4.0/)
 [![Check Style](https://github.com/Nall-chan/HoymilesWiFi/workflows/Check%20Style/badge.svg)](https://github.com/Nall-chan/HoymilesWiFi/actions) [![Run Tests](https://github.com/Nall-chan/HoymilesWiFi/workflows/Run%20Tests/badge.svg)](https://github.com/Nall-chan/HoymilesWiFi/actions)  
@@ -74,6 +74,13 @@ Dadurch wird automatisch der benötigte [IO](HoymilesWiFi%20IO/README.md) erstel
 
 ### 2. Changelog
 
+**Version 1.21:**  
+
+- Unter bestimmten Umständen konnte die Instanz-Konfiguration des IO nicht mehr geöffnet werden  
+- Startverhalten des IO beim Symcon Neustart angepasst  
+- Umkonfigurieren der IO Instanz berücksichtigt nicht mehr den gespeicherten letzten Zustand (aktiv/inaktiv)  
+- Neue Power-On Überwachung mit zusätzlich Netzwerk-Ping oder eigener Bedingung  
+
 **Version 1.2:**  
 
 - Version für Symcon 8.1 und neuer  
@@ -82,7 +89,7 @@ Dadurch wird automatisch der benötigte [IO](HoymilesWiFi%20IO/README.md) erstel
 
 **Version 1.0:**  
 
- - Erstes Release nach Beta  
+- Erstes Release nach Beta  
 
 ## 6. Spenden  
   

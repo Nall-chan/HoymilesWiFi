@@ -38,53 +38,126 @@
             ]
         },
         {
-            "visible": true,
-            "type": "SelectInstance",
-            "name": "LocationId",
-            "validModules": [
-                "{45E97A63-F870-408A-B259-2933F7EABF74}"
-            ],
-            "caption": "Location Control for sleep at night",
-            "width": "300px",
-            "onChange": "IPS_RequestAction($id,'LocationId',$LocationId);"
-        },
-        {
-            "visible": true,
-            "type": "RowLayout",
-            "name": "StopNightControl",
+            "type": "ExpansionPanel",
+            "caption": "Advanced power-on watchdog",
             "items": [
                 {
-                    "type": "SelectVariable",
-                    "name": "StartVariableId",
-                    "caption": "Variable for sleep ending",
-                    "width": "300px",
-                    "onChange": "IPS_RequestAction($id,'DayValue',$StartVariableId);"
-                },
-                {
-                    "type": "SelectValue",
-                    "name": "DayValue",
-                    "caption": "Value for is day",
-                    "variableID": 1
-                }
-            ]
-        },
-        {
-            "visible": true,
-            "type": "RowLayout",
-            "name": "StartNightControl",
-            "items": [
-                {
-                    "type": "SelectVariable",
-                    "name": "StopVariableId",
-                    "caption": "Variable for sleep start",
-                    "width": "300px",
-                    "onChange": "IPS_RequestAction($id,'NightValue',$StopVariableId);"
-                },
-                {
-                    "type": "SelectValue",
-                    "name": "NightValue",
-                    "caption": "Value for is night",
-                    "variableID": 1
+                    "type": "RowLayout",
+                    "items": [
+                        {
+                            "name": "WatchdogType",
+                            "type": "Select",
+                            "caption": "Watchdog",
+                            "width": "275px",
+                            "onChange": "IPS_RequestAction($id,'WatchdogType',$WatchdogType);",
+                            "options": [
+                                {
+                                    "caption": "none",
+                                    "value": 0
+                                },
+                                {
+                                    "caption": "Timestamps or values",
+                                    "value": 1
+                                },
+                                {
+                                    "caption": "Network ping",
+                                    "value": 2
+                                },
+                                {
+                                    "caption": "Advanced condition",
+                                    "value": 3
+                                }
+                            ]
+                        },
+                        {
+                            "name": "TimePopup",
+                            "type": "PopupButton",
+                            "visible": false,
+                            "caption": "Timestamps or values",
+                            "popup": {
+                                "caption": "Select Location Control or Variables",
+                                "items": [
+                                    {
+                                        "type": "SelectInstance",
+                                        "name": "LocationId",
+                                        "validModules": [
+                                            "{45E97A63-F870-408A-B259-2933F7EABF74}"
+                                        ],
+                                        "caption": "Location Control for sleep at night",
+                                        "width": "300px",
+                                        "onChange": "IPS_RequestAction($id,'LocationId',$LocationId);"
+                                    },
+                                    {
+                                        "type": "RowLayout",
+                                        "items": [
+                                            {
+                                                "type": "SelectVariable",
+                                                "name": "StartVariableId",
+                                                "caption": "Variable for sleep ending",
+                                                "width": "300px",
+                                                "onChange": "IPS_RequestAction($id,'DayValue',$StartVariableId);"
+                                            },
+                                            {
+                                                "type": "SelectValue",
+                                                "name": "DayValue",
+                                                "caption": "Value for is day",
+                                                "variableID": 1,
+                                                "visible": false
+                                            }
+                                        ]
+                                    },
+                                    {
+                                        "type": "RowLayout",
+                                        "items": [
+                                            {
+                                                "type": "SelectVariable",
+                                                "name": "StopVariableId",
+                                                "caption": "Variable for sleep start",
+                                                "width": "300px",
+                                                "onChange": "IPS_RequestAction($id,'NightValue',$StopVariableId);"
+                                            },
+                                            {
+                                                "type": "SelectValue",
+                                                "name": "NightValue",
+                                                "caption": "Value for is night",
+                                                "variableID": 1,
+                                                "visible": false
+                                            }
+                                        ]
+                                    }
+                                ]
+                            }
+                        },
+                        {
+                            "name": "ConditionPopup",
+                            "type": "PopupButton",
+                            "visible": false,
+                            "caption": "Advanced condition",
+                            "popup": {
+                                "caption": "Select condition",
+                                "items": [
+                                    {
+                                        "type": "RowLayout",
+                                        "items": [
+                                            {
+                                                "name": "WatchdogInterval",
+                                                "type": "NumberSpinner",
+                                                "caption": "Check Interval",
+                                                "width": "150px",
+                                                "minimum": 0,
+                                                "suffix": "seconds"
+                                            },
+                                            {
+                                                "type": "SelectCondition",
+                                                "name": "WatchdogCondition",
+                                                "visible": false
+                                            }
+                                        ]
+                                    }
+                                ]
+                            }
+                        }
+                    ]
                 }
             ]
         },

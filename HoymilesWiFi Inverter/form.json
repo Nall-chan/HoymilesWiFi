@@ -5,6 +5,7 @@
             "type": "NumberSpinner",
             "caption": "Number",
             "minimum": 1,
+            "maximum": 3,
             "width": "200px"
         }
     ],
