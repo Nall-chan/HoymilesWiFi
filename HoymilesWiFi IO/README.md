@@ -2,8 +2,9 @@
 [![Version](https://img.shields.io/badge/Modul%20version-1.21-blue.svg)](https://community.symcon.de/t/modul-hoymiles-wifi-series-beta/135536/)
 [![Version](https://img.shields.io/badge/Symcon%20Version-8.1%20%3E-green.svg)](https://www.symcon.de/de/service/dokumentation/installation/migrationen/v80-v81-q3-2025/)  
 [![License](https://img.shields.io/badge/License-CC%20BY--NC--SA%204.0-green.svg)](https://creativecommons.org/licenses/by-nc-sa/4.0/)
-[![Check Style](https://github.com/Nall-chan/HoymilesWiFi/workflows/Check%20Style/badge.svg)](https://github.com/Nall-chan/HoymilesWiFi/actions) [![Run Tests](https://github.com/Nall-chan/HoymilesWiFi/workflows/Run%20Tests/badge.svg)](https://github.com/Nall-chan/HoymilesWiFi/actions)  
-[![Spenden](https://www.paypalobjects.com/de_DE/DE/i/btn/btn_donate_SM.gif)](#8-spenden)
+[![Check Style](https://github.com/Nall-chan/HoymilesWiFi/workflows/Check%20Style/badge.svg)](https://github.com/Nall-chan/HoymilesWiFi/actions)
+[![Run Tests](https://github.com/Nall-chan/HoymilesWiFi/workflows/Run%20Tests/badge.svg)](https://github.com/Nall-chan/HoymilesWiFi/actions)  
+[![PayPal.Me](https://img.shields.io/badge/PayPal-Me-lightblue.svg)](#8-spenden)
 [![Wunschliste](https://img.shields.io/badge/Wunschliste-Amazon-ff69fb.svg)](#8-spenden)  
 
 # Hoymiles WiFi IO <!-- omit in toc -->
@@ -76,7 +77,7 @@ Die Wechselrichter schalten sich bei Dunkelheit automatisch ab; um Fehlermeldung
 Alternativ oder auch zusätzlich kann er Watchdog genutzt werden, um die Abfrage des Nachts zu pausieren.  
 Hierfür gibt es folgende Möglichkeiten:
 1. Location Control mit den Variablen für Sonnenauf- und Untergang
-2. Beliebige Integer Variablen mit dem Profil `~UnixTmestemp`  
+2. Beliebige Integer Variablen mit dem Profil `~UnixTimestemp`  
 3. Beliebige Variablen mit Vergleichswert für Start und Ende
 4. Start und Ende wird per Netzwerk-Ping ermittel  
 5. Start und Ende werden über eine Bedingung definiert  
@@ -87,9 +88,9 @@ Hierfür gibt es folgende Möglichkeiten:
  1. Auswahl des Location Control, die Variablen für Schlafende und Start werden automatisch übernommen.  
  Der Vergleich erfolgt mit der aktuellen Uhrzeit.
  ![Konfiguration](imgs/config_location.png)  
- 2. Bei den Variablen für Schlafende und Start wurden Variablen mit dem Profil `~UnixTmestemp` ausgewählt.  
+ 2. Bei den Variablen für Schlafende und Start wurden Variablen mit dem Profil `~UnixTimestemp` ausgewählt.  
  Der Vergleich erfolgt mit der aktuellen Uhrzeit.
- 3. Bei den Variablen für Schlafende und Start wurden Variablen mit **einem anderen Profil** als `~UnixTmestemp` ausgewählt.  
+ 3. Bei den Variablen für Schlafende und Start wurden Variablen mit **einem anderen Profil** als `~UnixTimestemp` ausgewählt.  
  Für den Vergleich müssen jeweils die Vergleichswerte eingestellt werden, welche für den Vergleich genutzt werden.  
  ![Konfiguration](imgs/config_values.png)  
  4. Sobald der Wechselrichter nicht erreichbar ist, wird in den eingestellten WatchdogInterval ein Netzwerk-Ping gesendet und damit der Wechsel auf Tag erkannt.  
@@ -131,7 +132,7 @@ siehe Changelog der [Hoymiles WiFi-Library](../README.md#2-changelog).
   
   Die Library ist für die nicht kommerzielle Nutzung kostenlos, Schenkungen als Unterstützung für den Autor werden hier akzeptiert:  
 
-<a href="https://www.paypal.com/donate?hosted_button_id=G2SLW2MEMQZH2" target="_blank"><img src="https://www.paypalobjects.com/de_DE/DE/i/btn/btn_donate_LG.gif" border="0" /></a>
+[![PayPal.Me](https://img.shields.io/badge/PayPal-Me-lightblue.svg)](https://paypal.me/Nall4chan)  
 
 [![Wunschliste](https://img.shields.io/badge/Wunschliste-Amazon-ff69fb.svg)](https://www.amazon.de/hz/wishlist/ls/YU4AI9AQT9F?ref_=wl_share)
 
