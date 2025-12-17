@@ -8,6 +8,7 @@
 [![Wunschliste](https://img.shields.io/badge/Wunschliste-Amazon-ff69fb.svg)](#9-spenden)  
 
 # Hoymiles WiFi Inverter <!-- omit in toc -->
+
 Anzeigen und Steuern der Werte des Inverters
 
 ## Inhaltsverzeichnis <!-- omit in toc -->
@@ -25,35 +26,34 @@ Anzeigen und Steuern der Werte des Inverters
 
 ## 1. Funktionsumfang
 
-* Anzeigen der Werte des Inverters
-* Setzen des Leistungslimit
+- Anzeigen der Werte des Inverters
+- Setzen des Leistungslimit
 
 ## 2. Voraussetzungen
 
- * IP-Symcon ab Version 8.1
- * Hoymiles Wechselrichter mit WiFi (integrierte DTU)
+- IP-Symcon ab Version 8.1
+- Hoymiles Wechselrichter mit WiFi (integrierte DTU)
   
 ## 3. Software-Installation
 
- Dieses Modul ist Bestandteil der [Hoymiles WiFi-Library](../README.md#3-software-installation).    
-
+Dieses Modul ist Bestandteil der [Hoymiles WiFi-Library](../README.md#3-software-installation).  
 
 ## 4. Einrichten der Instanzen in IP-Symcon
 
- Unter 'Instanz hinzufügen' kann das 'Hoymiles WiFi Inverter'-Modul mithilfe des Schnellfilters gefunden werden.  
-	- Weitere Informationen zum Hinzufügen von Instanzen in der [Dokumentation der Instanzen](https://www.symcon.de/service/dokumentation/konzepte/instanzen/#Instanz_hinzufügen)
+Unter 'Instanz hinzufügen' kann das 'Hoymiles WiFi Inverter'-Modul mithilfe des Schnellfilters gefunden werden.  
+Weitere Informationen zum Hinzufügen von Instanzen in der [Dokumentation der Instanzen](https://www.symcon.de/service/dokumentation/konzepte/instanzen/#Instanz_hinzufügen)
 
 Es wird empfohlen diese Instanz über die dazugehörige Instanz des [Configurator-Moduls](../HoymilesWiFi%20Configurator/README.md) anzulegen.  
 
-![Instanzen](../imgs/inst.png) 
+![Instanzen](../imgs/inst.png)  
 
-__Konfigurationsseite__:
+**Konfigurationsseite**:  
 
 | Name   | Typ     | Standardwert | Beschreibung          |
 | ------ | ------- | :----------: | --------------------- |
 | Number | integer |      1       | Adresse des Inverters |
 
-![Config](imgs/config.png) 
+![Config](imgs/config.png)  
 
 ## 5. Statusvariablen
 
@@ -72,31 +72,32 @@ Die Statusvariablen werden automatisch angelegt. Das Löschen einzelner kann zu 
 | Link            | bool    | Inverter mit DTU verbunden        |
 | Leistungslimit  | integer | Einstellbares Limit des Inverters |
 
-
 ## 6. PHP-Befehlsreferenz
 
 ```php
 bool HMSWIFI_SetPowerLimit(integer $InstanzID, int $Limit);
 ```
-Setzen des Leistungslimit des Inverters.   
+
+Setzen des Leistungslimit des Inverters.  
 Der neue Wert in `$Limit` ist in Prozent anzugeben.  
 > [!CAUTION]
 > Bitte auf die Nutzung der Leistungsbegrenzung bei Nulleinspeisung verzichten, da es durch übermäßige Schreibvorgänge im EEPROM zu einer Beschädigung des Wechselrichters kommen kann.  
 
 ---
+
 ```php
 bool HMSWIFI_SetInverterState(integer $InstanzID, bool $State);
 ```
-Ein (`true`) oder ausschalten (`false`) des Inverters über den Parameter `State`.  
 
+Ein (`true`) oder ausschalten (`false`) des Inverters über den Parameter `State`.  
 
 ## 8. Changelog
 
-siehe Changelog der [Hoymiles WiFi-Library](../README.md#2-changelog).   
+siehe Changelog der [Hoymiles WiFi-Library](../README.md#2-changelog).  
 
 ## 9. Spenden  
   
-  Die Library ist für die nicht kommerzielle Nutzung kostenlos, Schenkungen als Unterstützung für den Autor werden hier akzeptiert:  
+Die Library ist für die nicht kommerzielle Nutzung kostenlos, Schenkungen als Unterstützung für den Autor werden hier akzeptiert:  
 
 [![PayPal.Me](https://img.shields.io/badge/PayPal-Me-lightblue.svg)](https://paypal.me/Nall4chan)  
 
@@ -104,4 +105,4 @@ siehe Changelog der [Hoymiles WiFi-Library](../README.md#2-changelog).
 
 ## 10. Lizenz
 
-  [CC BY-NC-SA 4.0](https://creativecommons.org/licenses/by-nc-sa/4.0/)  
+[CC BY-NC-SA 4.0](https://creativecommons.org/licenses/by-nc-sa/4.0/)  

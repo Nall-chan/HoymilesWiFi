@@ -8,6 +8,7 @@
 [![Wunschliste](https://img.shields.io/badge/Wunschliste-Amazon-ff69fb.svg)](#8-spenden)  
 
 # Hoymiles WiFi DTU <!-- omit in toc -->
+
 Darstellen der ausgelesenen Werte aus der DTU
 
 ## Inhaltsverzeichnis <!-- omit in toc -->
@@ -25,27 +26,25 @@ Darstellen der ausgelesenen Werte aus der DTU
 
 ## 1. Funktionsumfang
 
-* Anzeigen der Werte der DTU
+- Anzeigen der Werte der DTU
 
 ## 2. Voraussetzungen
 
- * Symcon ab Version 8.1  
- * Hoymiles Wechselrichter mit WiFi (integrierte DTU)
+- Symcon ab Version 8.1  
+- Hoymiles Wechselrichter mit WiFi (integrierte DTU)
 
 ## 3. Software-Installation
 
- Dieses Modul ist Bestandteil der [Hoymiles WiFi-Library](../README.md#3-software-installation).    
-
+Dieses Modul ist Bestandteil der [Hoymiles WiFi-Library](../README.md#3-software-installation).  
 
 ## 4. Einrichten der Instanzen in IP-Symcon
 
- Unter 'Instanz hinzufügen' kann das 'Hoymiles WiFi DTU'-Modul mithilfe des Schnellfilters gefunden werden.  
-	- Weitere Informationen zum Hinzufügen von Instanzen in der [Dokumentation der Instanzen](https://www.symcon.de/service/dokumentation/konzepte/instanzen/#Instanz_hinzufügen)
+Unter 'Instanz hinzufügen' kann das 'Hoymiles WiFi DTU'-Modul mithilfe des Schnellfilters gefunden werden.  
+Weitere Informationen zum Hinzufügen von Instanzen in der [Dokumentation der Instanzen](https://www.symcon.de/service/dokumentation/konzepte/instanzen/#Instanz_hinzufügen)
 
 Es wird empfohlen diese Instanz über die dazugehörige Instanz des [Configurator-Moduls](../HoymilesWiFi%20Configurator/README.md) anzulegen.  
 
-![Instanzen](../imgs/inst.png) 
-
+![Instanzen](../imgs/inst.png)  
 
 ## 5. Statusvariablen
 
@@ -61,15 +60,15 @@ Die Statusvariablen werden automatisch angelegt. Das Löschen einzelner kann zu 
 
 ## 6. PHP-Befehlsreferenz
 
-   Es existieren keine PHP-Befehle für dieses Modul. 
+Es existieren keine PHP-Befehle für dieses Modul.  
 
 ## 7. Changelog
 
-siehe Changelog der [Hoymiles WiFi-Library](../README.md#2-changelog).   
+siehe Changelog der [Hoymiles WiFi-Library](../README.md#2-changelog).  
 
 ## 8. Spenden  
   
-  Die Library ist für die nicht kommerzielle Nutzung kostenlos, Schenkungen als Unterstützung für den Autor werden hier akzeptiert:  
+Die Library ist für die nicht kommerzielle Nutzung kostenlos, Schenkungen als Unterstützung für den Autor werden hier akzeptiert:  
 
 [![PayPal.Me](https://img.shields.io/badge/PayPal-Me-lightblue.svg)](https://paypal.me/Nall4chan)  
 
@@ -77,4 +76,4 @@ siehe Changelog der [Hoymiles WiFi-Library](../README.md#2-changelog).
 
 ## 9. Lizenz
 
-  [CC BY-NC-SA 4.0](https://creativecommons.org/licenses/by-nc-sa/4.0/)  
+[CC BY-NC-SA 4.0](https://creativecommons.org/licenses/by-nc-sa/4.0/)  

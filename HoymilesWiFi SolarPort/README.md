@@ -8,6 +8,7 @@
 [![Wunschliste](https://img.shields.io/badge/Wunschliste-Amazon-ff69fb.svg)](#9-spenden)  
 
 # Hoymiles WiFi SolarPort <!-- omit in toc -->
+
 Anzeigen der Werte eines Solar Anschlusses.
 
 ## Inhaltsverzeichnis <!-- omit in toc -->
@@ -25,34 +26,33 @@ Anzeigen der Werte eines Solar Anschlusses.
 
 ## 1. Funktionsumfang
 
-* Anzeigen der Werte eines Solar Anschlusses.
+- Anzeigen der Werte eines Solar Anschlusses.
 
 ## 2. Voraussetzungen
 
- * Symcon ab Version 8.1  
- * Hoymiles Wechselrichter mit WiFi (integrierte DTU)
+- Symcon ab Version 8.1  
+- Hoymiles Wechselrichter mit WiFi (integrierte DTU)
 
 ## 3. Software-Installation
 
- Dieses Modul ist Bestandteil der [Hoymiles WiFi-Library](../README.md#3-software-installation).    
-
+Dieses Modul ist Bestandteil der [Hoymiles WiFi-Library](../README.md#3-software-installation).  
 
 ## 4. Einrichten der Instanzen in IP-Symcon
 
- Unter 'Instanz hinzufügen' kann das 'Hoymiles WiFi SolarPort'-Modul mithilfe des Schnellfilters gefunden werden.  
-	- Weitere Informationen zum Hinzufügen von Instanzen in der [Dokumentation der Instanzen](https://www.symcon.de/service/dokumentation/konzepte/instanzen/#Instanz_hinzufügen)
+Unter 'Instanz hinzufügen' kann das 'Hoymiles WiFi SolarPort'-Modul mithilfe des Schnellfilters gefunden werden.  
+Weitere Informationen zum Hinzufügen von Instanzen in der [Dokumentation der Instanzen](https://www.symcon.de/service/dokumentation/konzepte/instanzen/#Instanz_hinzufügen)
 
 Es wird empfohlen diese Instanz über die dazugehörige Instanz des [Configurator-Moduls](../HoymilesWiFi%20Configurator/README.md) anzulegen.  
 
-![Instanzen](../imgs/inst.png) 
+![Instanzen](../imgs/inst.png)  
 
-__Konfigurationsseite__:
+**Konfigurationsseite:**  
 
 | Name | Typ     | Standardwert | Beschreibung           |
 | ---- | ------- | :----------: | ---------------------- |
 | Port | integer |      1       | Nummer des Anschlusses |
 
-![Config](imgs/config.png) 
+![Config](imgs/config.png)  
 
 ## 5. Statusvariablen
 
@@ -70,11 +70,11 @@ Die Statusvariablen werden automatisch angelegt. Das Löschen einzelner kann zu 
 
 ## 7. PHP-Befehlsreferenz
 
-   Es existieren keine PHP-Befehle für dieses Modul. 
-   
+   Es existieren keine PHP-Befehle für dieses Modul.  
+
 ## 8. Changelog
 
-siehe Changelog der [Hoymiles WiFi-Library](../README.md#2-changelog).   
+siehe Changelog der [Hoymiles WiFi-Library](../README.md#2-changelog).  
 
 ## 9. Spenden  
   
@@ -86,4 +86,4 @@ siehe Changelog der [Hoymiles WiFi-Library](../README.md#2-changelog).
 
 ## 10. Lizenz
 
-  [CC BY-NC-SA 4.0](https://creativecommons.org/licenses/by-nc-sa/4.0/)  
+[CC BY-NC-SA 4.0](https://creativecommons.org/licenses/by-nc-sa/4.0/)  

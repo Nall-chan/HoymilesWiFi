@@ -8,6 +8,7 @@
 [![Wunschliste](https://img.shields.io/badge/Wunschliste-Amazon-ff69fb.svg)](#8-spenden)  
 
 # Hoymiles WiFi IO <!-- omit in toc -->
+
 Regelt die Kommunikation mit einem Hoymiles WiFi Wechselrichter.  
 
 ## Inhaltsverzeichnis <!-- omit in toc -->
@@ -24,29 +25,29 @@ Regelt die Kommunikation mit einem Hoymiles WiFi Wechselrichter.
 
 ## 1. Funktionsumfang
 
-* Intervall-Abfragen aller relevanten Daten.  
-* Schlafmodus der Instanz per Script, Aktion oder Variable möglich.  
-* Abschaltbare unterdrückung von Fehlermeldungen, wenn Gerät nicht erreichbar ist.  
+- Intervall-Abfragen aller relevanten Daten.  
+- Schlafmodus der Instanz per Script, Aktion oder Variable möglich.  
+- Abschaltbare unterdrückung von Fehlermeldungen, wenn Gerät nicht erreichbar ist.  
 
 ## 2. Voraussetzungen
 
- * Symcon ab Version 8.1  
- * Hoymiles Wechselrichter mit WiFi (integrierte DTU)
+- Symcon ab Version 8.1  
+- Hoymiles Wechselrichter mit WiFi (integrierte DTU)
 
 ## 3. Software-Installation
 
- Dieses Modul ist Bestandteil der [Hoymiles WiFi-Library](../README.md#3-software-installation).   
+Dieses Modul ist Bestandteil der [Hoymiles WiFi-Library](../README.md#3-software-installation).  
 
 ## 4. Einrichten der Instanzen in IP-Symcon
 
- Unter 'Instanz hinzufügen' kann das 'Hoymiles WiFi IO'-Modul mithilfe des Schnellfilters gefunden werden.  
-	- Weitere Informationen zum Hinzufügen von Instanzen in der [Dokumentation der Instanzen](https://www.symcon.de/service/dokumentation/konzepte/instanzen/#Instanz_hinzufügen)
+Unter 'Instanz hinzufügen' kann das 'Hoymiles WiFi IO'-Modul mithilfe des Schnellfilters gefunden werden.  
+Weitere Informationen zum Hinzufügen von Instanzen in der [Dokumentation der Instanzen](https://www.symcon.de/service/dokumentation/konzepte/instanzen/#Instanz_hinzufügen)
 
 Es wird empfohlen eine Instanz des [Configurator-Moduls](../HoymilesWiFi%20Configurator/README.md) anzulegen, die IO Instanz wird automatisch mit erzeugt.  
 
-![Instanzen](../imgs/inst.png) 
+![Instanzen](../imgs/inst.png)  
 
-__Konfigurationsseite__:
+**Konfigurationsseite**:  
 
 | Name                    | Typ     | Standardwert | Beschreibung                                              |
 | ----------------------- | ------- | :----------: | --------------------------------------------------------- |
@@ -63,7 +64,6 @@ __Konfigurationsseite__:
 | DayValue                | string  |              | Vergleichswert (JSON-Kodiert) zum beenden des Schlafmodus |
 | NightValue              | string  |              | Vergleichswert (JSON-Kodiert) zum starten des Schlafmodus |
 
-
 ![Konfiguration](imgs/config.png)  
 
 > [!IMPORTANT]
@@ -75,7 +75,8 @@ Die Wechselrichter schalten sich bei Dunkelheit automatisch ab; um Fehlermeldung
 **Hierdurch können dann aber keine defekten Verbindungen bzw. ein Ausfall mehr erkannt werden.**  
 
 Alternativ oder auch zusätzlich kann er Watchdog genutzt werden, um die Abfrage des Nachts zu pausieren.  
-Hierfür gibt es folgende Möglichkeiten:
+Hierfür gibt es folgende Möglichkeiten:  
+
 1. Location Control mit den Variablen für Sonnenauf- und Untergang
 2. Beliebige Integer Variablen mit dem Profil `~UnixTimestemp`  
 3. Beliebige Variablen mit Vergleichswert für Start und Ende
@@ -85,6 +86,7 @@ Hierfür gibt es folgende Möglichkeiten:
 7. Instanz-Funktionen `HMSWIFI_SetInactive` und `HMSWIFI_SetActive`
 
 **Varianten:**  
+
  1. Auswahl des Location Control, die Variablen für Schlafende und Start werden automatisch übernommen.  
  Der Vergleich erfolgt mit der aktuellen Uhrzeit.
  ![Konfiguration](imgs/config_location.png)  
@@ -109,28 +111,34 @@ Hierfür gibt es folgende Möglichkeiten:
 ```php
 bool HMSWIFI_RequestState(integer $InstanzID);
 ```
+
 Abrufen der Daten vom Wechselrichter.  
 
 ---
+
 ```php
 bool HMSWIFI_SetActive(integer $InstanzID);
 ```
+
 Schlafmodus beenden, Abfrageintervall starten.  
 
 ---
+
 ```php
 bool HMSWIFI_SetInactive(integer $InstanzID);
 ```
+
 Schlafmodus starten, Abfrageintervall beenden.  
 
 ---
+
 ## 7. Changelog
 
-siehe Changelog der [Hoymiles WiFi-Library](../README.md#2-changelog).   
+siehe Changelog der [Hoymiles WiFi-Library](../README.md#2-changelog).  
 
 ## 8. Spenden  
   
-  Die Library ist für die nicht kommerzielle Nutzung kostenlos, Schenkungen als Unterstützung für den Autor werden hier akzeptiert:  
+Die Library ist für die nicht kommerzielle Nutzung kostenlos, Schenkungen als Unterstützung für den Autor werden hier akzeptiert:  
 
 [![PayPal.Me](https://img.shields.io/badge/PayPal-Me-lightblue.svg)](https://paypal.me/Nall4chan)  
 
@@ -138,4 +146,4 @@ siehe Changelog der [Hoymiles WiFi-Library](../README.md#2-changelog).
 
 ## 9. Lizenz
 
-  [CC BY-NC-SA 4.0](https://creativecommons.org/licenses/by-nc-sa/4.0/)  
+[CC BY-NC-SA 4.0](https://creativecommons.org/licenses/by-nc-sa/4.0/)  

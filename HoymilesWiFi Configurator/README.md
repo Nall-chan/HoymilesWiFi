@@ -8,6 +8,7 @@
 [![Wunschliste](https://img.shields.io/badge/Wunschliste-Amazon-ff69fb.svg)](#8-spenden)  
 
 # Hoymiles WiFi Configurator <!-- omit in toc -->
+
 Konfigurator zum Anlegen von Geräte-Instanzen in Symcon.
 
 ## Inhaltsverzeichnis <!-- omit in toc -->
@@ -24,43 +25,43 @@ Konfigurator zum Anlegen von Geräte-Instanzen in Symcon.
 
 ## 1. Funktionsumfang
 
-* Konfigurator zum Anlegen von Geräte-Instanzen in Symcon.
+- Konfigurator zum Anlegen von Geräte-Instanzen in Symcon.
 
 ## 2. Voraussetzungen
 
- * Symcon ab Version 8.1  
- * Hoymiles Wechselrichter mit WiFi (integrierte DTU)
+- Symcon ab Version 8.1  
+- Hoymiles Wechselrichter mit WiFi (integrierte DTU)
 
 ## 3. Software-Installation
 
- Dieses Modul ist Bestandteil der [Hoymiles WiFi-Library](../README.md#3-software-installation).   
+Dieses Modul ist Bestandteil der [Hoymiles WiFi-Library](../README.md#3-software-installation).  
 
 ## 4. Einrichten der Instanzen in IP-Symcon
 
- Unter 'Instanz hinzufügen' kann das 'Hoymiles WiFi Konfigurator'-Modul mithilfe des Schnellfilters gefunden werden.  
-	- Weitere Informationen zum Hinzufügen von Instanzen in der [Dokumentation der Instanzen](https://www.symcon.de/service/dokumentation/konzepte/instanzen/#Instanz_hinzufügen)
+Unter 'Instanz hinzufügen' kann das 'Hoymiles WiFi Konfigurator'-Modul mithilfe des Schnellfilters gefunden werden.  
+Weitere Informationen zum Hinzufügen von Instanzen in der [Dokumentation der Instanzen](https://www.symcon.de/service/dokumentation/konzepte/instanzen/#Instanz_hinzufügen)
 
-![Instanzen](../imgs/inst.png) 
+![Instanzen](../imgs/inst.png)  
 
-__Konfigurationsseite__:
+**Konfigurationsseite**:
 
-![Config](imgs/config.png) 
+![Config](imgs/config.png)  
 
 ## 5. Statusvariablen
 
-   Es werden keine Statusvariablen angelegt.  
+Es werden keine Statusvariablen angelegt.  
 
 ## 6. PHP-Befehlsreferenz
 
-   Es existieren keine PHP-Befehle für dieses Modul. 
+Es existieren keine PHP-Befehle für dieses Modul.  
 
 ## 7. Changelog
 
-siehe Changelog der [Hoymiles WiFi-Library](../README.md#2-changelog).   
+siehe Changelog der [Hoymiles WiFi-Library](../README.md#2-changelog).  
 
 ## 8. Spenden  
   
-  Die Library ist für die nicht kommerzielle Nutzung kostenlos, Schenkungen als Unterstützung für den Autor werden hier akzeptiert:  
+Die Library ist für die nicht kommerzielle Nutzung kostenlos, Schenkungen als Unterstützung für den Autor werden hier akzeptiert:  
 
 [![PayPal.Me](https://img.shields.io/badge/PayPal-Me-lightblue.svg)](https://paypal.me/Nall4chan)  
 
@@ -68,4 +69,4 @@ siehe Changelog der [Hoymiles WiFi-Library](../README.md#2-changelog).
 
 ## 9. Lizenz
 
-  [CC BY-NC-SA 4.0](https://creativecommons.org/licenses/by-nc-sa/4.0/)  
+[CC BY-NC-SA 4.0](https://creativecommons.org/licenses/by-nc-sa/4.0/)  

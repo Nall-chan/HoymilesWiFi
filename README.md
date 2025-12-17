@@ -10,12 +10,12 @@
 # Hoymiles WiFi Wechselrichter <!-- omit in toc -->  
 
 Integration der Hoymiles Wechselrichter mit integrierten WiFi  
+
 - HMS-600W/700W/800W/900W/1000W-2T (Wi-Fi integrated)
 - HMS-300W/350W/400W/450W/500W-1T (Wi-Fi integrated)
 
-## Dokumentation <!-- omit in toc -->
+## Inhaltsverzeichnis <!-- omit in toc -->
 
-**Inhaltsverzeichnis**
 - [1. Funktionsumfang](#1-funktionsumfang)
 - [2. Voraussetzungen](#2-voraussetzungen)
 - [3. Software-Installation](#3-software-installation)
@@ -30,30 +30,30 @@ Integration der Hoymiles Wechselrichter mit integrierten WiFi
 
 Folgende Module beinhaltet das Hoymiles WiFi Smart Rollos Repository:
 
-- __Hoymiles WiFi IO__ ([Dokumentation](HoymilesWiFi%20IO/README.md))  
-	IO Instanz zur Kommunikation mit der integrierten DTU.  
+- **Hoymiles WiFi IO** ([Dokumentation](HoymilesWiFi%20IO/README.md))  
+  IO Instanz zur Kommunikation mit der integrierten DTU.  
 
-- __Hoymiles WiFi Configurator__ ([Dokumentation](HoymilesWiFi%20Configurator/README.md))  
-	Konfigurator Instanz zum auslesen der bekannten Geräte und einfachen anlegen von Instanzen in Symcon.  
+- **Hoymiles WiFi Configurator** ([Dokumentation](HoymilesWiFi%20Configurator/README.md))  
+  Konfigurator Instanz zum auslesen der bekannten Geräte und einfachen anlegen von Instanzen in Symcon.  
 
-- __Hoymiles WiFi DTU__ ([Dokumentation](HoymilesWiFi%20DTU/README.md))  
-	Geräte Instanz für die integrierte DTU.  
+- **Hoymiles WiFi DTU** ([Dokumentation](HoymilesWiFi%20DTU/README.md))  
+  Geräte Instanz für die integrierte DTU.  
 
-- __Hoymiles WiFi Inverter__ ([Dokumentation](HoymilesWiFi%20Inverter/README.md))  
-	Geräte Instanz für den integrierten Inverter.  
+- **Hoymiles WiFi Inverter** ([Dokumentation](HoymilesWiFi%20Inverter/README.md))  
+  Geräte Instanz für den integrierten Inverter.  
 
-- __Hoymiles WiFi SolarPort__ ([Dokumentation](HoymilesWiFi%20SolarPort/README.md))  
-	Geräte Instanz für jeweils einen Anschluss von Solarmodulen.  
+- **Hoymiles WiFi SolarPort** ([Dokumentation](HoymilesWiFi%20SolarPort/README.md))  
+  Geräte Instanz für jeweils einen Anschluss von Solarmodulen.  
 
 ## 2. Voraussetzungen  
 
- * Symcon ab Version 8.1  
- * Hoymiles Wechselrichter mit WiFi (integrierte DTU)
+- Symcon ab Version 8.1  
+- Hoymiles Wechselrichter mit WiFi (integrierte DTU)
   
 ## 3. Software-Installation
 
-  Über den 'Module-Store' in IPS das Modul 'Hoymiles WiFi' hinzufügen.  
-   **Bei kommerzieller Nutzung (z.B. als Errichter oder Integrator) wenden Sie sich bitte an den Autor.**  
+Über den 'Module-Store' in IPS das Modul 'Hoymiles WiFi' hinzufügen.  
+**Bei kommerzieller Nutzung (z.B. als Errichter oder Integrator) wenden Sie sich bitte an den Autor.**  
 ![Module-Store](imgs/install.png)  
 
 ## 4. Einrichten der Instanzen in IP-Symcon
@@ -76,6 +76,7 @@ Dadurch wird automatisch der benötigte [IO](HoymilesWiFi%20IO/README.md) erstel
 ### 2. Changelog
 
 **Version 1.22:**  
+
 - Fix: Support Links  
 - Update Submodule  
   
