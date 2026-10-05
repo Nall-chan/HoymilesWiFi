@@ -1,7 +1,7 @@
 [![SDK](https://img.shields.io/badge/Symcon-PHPModul-red.svg)](https://www.symcon.de/service/dokumentation/entwicklerbereich/sdk-tools/sdk-php/)
-[![Version](https://img.shields.io/badge/Modul%20version-1.21-blue.svg)](https://community.symcon.de/t/modul-hoymiles-wifi-series-beta/135536/)
-[![Version](https://img.shields.io/badge/Symcon%20Version-8.1%20%3E-green.svg)](https://www.symcon.de/de/service/dokumentation/installation/migrationen/v80-v81-q3-2025/)  
-[![License](https://img.shields.io/badge/License-CC%20BY--NC--SA%204.0-green.svg)](https://creativecommons.org/licenses/by-nc-sa/4.0/)
+[![Module Version](https://img.shields.io/badge/dynamic/json?url=https%3A%2F%2Fraw.githubusercontent.com%2FNall-chan%2FHoymilesWiFi%2Frefs%2Fheads%2Fmaster%2Flibrary.json&query=%24.version&label=Modul%20Version&color=blue)](https://community.symcon.de/t/modul-hoymiles-wifi-series-beta/135536/)
+[![Symcon Version](https://img.shields.io/badge/dynamic/json?url=https%3A%2F%2Fraw.githubusercontent.com%2FNall-chan%2FHoymilesWiFi%2Frefs%2Fheads%2Fmaster%2Flibrary.json&query=%24.compatibility.version&suffix=%3E&label=Symcon%20Version&color=green)](https://www.symcon.de/de/service/dokumentation/installation/migrationen/v80-v81-q3-2025/)  
+[![License](https://img.shields.io/badge/License-Custom--NC--SA-green.svg)](#7-lizenz)
 [![Check Style](https://github.com/Nall-chan/HoymilesWiFi/workflows/Check%20Style/badge.svg)](https://github.com/Nall-chan/HoymilesWiFi/actions)
 [![Run Tests](https://github.com/Nall-chan/HoymilesWiFi/workflows/Run%20Tests/badge.svg)](https://github.com/Nall-chan/HoymilesWiFi/actions)  
 [![PayPal.Me](https://img.shields.io/badge/PayPal-Me-lightblue.svg)](#6-spenden)
@@ -21,8 +21,8 @@ Integration der Hoymiles Wechselrichter mit integrierten WiFi
 - [3. Software-Installation](#3-software-installation)
 - [4. Einrichten der Instanzen in IP-Symcon](#4-einrichten-der-instanzen-in-ip-symcon)
 - [5. Anhang](#5-anhang)
-	- [1. GUID der Module](#1-guid-der-module)
-	- [2. Changelog](#2-changelog)
+  - [1. GUID der Module](#1-guid-der-module)
+  - [2. Changelog](#2-changelog)
 - [6. Spenden](#6-spenden)
 - [7. Lizenz](#7-lizenz)
 
@@ -75,6 +75,18 @@ Dadurch wird automatisch der benötigte [IO](HoymilesWiFi%20IO/README.md) erstel
 
 ### 2. Changelog
 
+**Version 1.23:**  
+
+- Unterstützung für DTUs mit verschlüsselter Kommunikation (neuere DTU-Firmware, Fehler `Data has wrong length.`)  
+- Antworten der DTU werden vollständig anhand der Länge im Header gelesen  
+- Erweiterte Debug-Ausgaben im IO  
+- Protobuf-Bibliothek auf Version 5.36.2 aktualisiert (behebt Deprecation-Meldungen mit neueren PHP-Versionen)  
+- Fehlermeldungen des IO übersetzt  
+- Neue Statusvariablen DTU: WLAN Signalstärke, Software-, Hardware- und WLAN-Version  
+- Neue Statusvariablen Inverter: Blindleistung, Warnungen, Software- und Hardware-Version  
+- Neue Instanz-Funktionen `HMSWIFI_RebootDTU` und `HMSWIFI_RebootInverter` (inkl. Schaltflächen in der Instanz-Konfiguration)  
+- Schlüsselmaterial verschlüsselter DTUs wird im Debug maskiert  
+
 **Version 1.22:**  
 
 - Fix: Support Links  
@@ -107,4 +119,5 @@ Dadurch wird automatisch der benötigte [IO](HoymilesWiFi%20IO/README.md) erstel
 
 ## 7. Lizenz
 
-  [CC BY-NC-SA 4.0](https://creativecommons.org/licenses/by-nc-sa/4.0/)  
+IPS-Modul:  
+[Custom NC-SA](LICENSE)

@@ -8,6 +8,7 @@ eval('declare(strict_types=1);namespace HoymilesWiFiDTU {?>' . file_get_contents
 /**
  * @method void SetValueInteger(string $Ident, int $value)
  * @method void SetValueFloat(string $Ident, float $value)
+ * @method void SetValueString(string $Ident, string $value)
  */
 class HoymilesWiFiDTU extends IPSModuleStrict
 {
@@ -33,6 +34,28 @@ class HoymilesWiFiDTU extends IPSModuleStrict
         return '';
     }
 
+    /**
+     * Startet die DTU neu.
+     *
+     * @return bool true wenn die DTU den Befehl bestätigt hat
+     */
+    public function RebootDTU(): bool
+    {
+        if (!$this->HasActiveParent()) {
+            trigger_error($this->Translate('Instance has no active parent'), E_USER_NOTICE);
+            return false;
+        }
+        $ret = $this->SendDataToParent(json_encode([
+            'DataID'   => \HoymilesWiFi\GUID::DeviceToIo,
+            'Function' => 'RebootDTU',
+            'Data'     => ''
+        ]));
+        if ($ret === '') {
+            return false;
+        }
+        return unserialize($ret);
+    }
+
     private function DecodeData(array $DataValues): void
     {
         foreach ($DataValues as $Key => $Value) {
@@ -50,6 +73,9 @@ class HoymilesWiFiDTU extends IPSModuleStrict
                     break;
                 case VARIABLETYPE_FLOAT:
                     $this->SetValueFloat($Key, $Value * $Var[3]);
+                    break;
+                case VARIABLETYPE_STRING:
+                    $this->SetValueString($Key, (string) $Value);
                     break;
             }
         }

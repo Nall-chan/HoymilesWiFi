@@ -10,6 +10,14 @@
             "Temperature": "Temperatur",
             "Link": "Link",
             "Power Limit": "Leistungslimit",
+            "Reactive power": "Blindleistung",
+            "Warnings": "Warnungen",
+            "Software version": "Software-Version",
+            "Hardware version": "Hardware-Version",
+            "Reboot inverter": "Wechselrichter neu starten",
+            "Really reboot the inverter?": "Wechselrichter wirklich neu starten?",
+            "Instance has no active parent": "Instanz hat keinen aktiven Parent",
+            "Invalid Ident": "Ungültiger Ident",
             "This module is free for non-commercial use,\r\nDonations in support of the author are accepted here:": "Dieses Modul ist für die nicht kommerzielle Nutzung kostenlos,\r\nSchenkungen als Unterstützung für den Autor werden hier akzeptiert:"
         }
     }

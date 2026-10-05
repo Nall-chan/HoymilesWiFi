@@ -29,6 +29,7 @@ class AutoLoaderHoymilesWiFi
 }
 
 require_once dirname(__DIR__) . '/libs/HoymilesWiFi.php';
+require_once dirname(__DIR__) . '/libs/HoymilesCrypt.php';
 require_once dirname(__DIR__) . '/libs/Hoymiles/RealDataResDTO.php';
 require_once dirname(__DIR__) . '/libs/Hoymiles/RealDataReqDTO.php';
 require_once dirname(__DIR__) . '/libs/Hoymiles/CommandReqDTO.php';
@@ -59,6 +60,10 @@ eval('declare(strict_types=1);namespace HoymilesIO {?>' . file_get_contents(dirn
 
 /**
  * @property int $Sequenz
+ * @property bool $EncryptionChecked
+ * @property string $EncRand
+ * @property int $LastAppInfo
+ * @property array $InverterSerials
  * @property int $NbrOfInverter
  * @property int $NbrOfSolarPort
  * @property int $DayVariableId
@@ -85,6 +90,10 @@ class HoymilesWiFiIO extends IPSModuleStrict
     {
         parent::Create();
         $this->Sequenz = 0;
+        $this->EncryptionChecked = false;
+        $this->EncRand = '';
+        $this->LastAppInfo = 0;
+        $this->InverterSerials = [];
         $this->NbrOfInverter = 0;
         $this->NbrOfSolarPort = 0;
         $this->DayVariableId = 1;
@@ -139,6 +148,10 @@ class HoymilesWiFiIO extends IPSModuleStrict
         $this->SetTimerInterval(\HoymilesWiFi\IO\Timer::RequestState, 0);
         $this->SetTimerInterval(\HoymilesWiFi\IO\Timer::Watchdog, 0);
         $this->Sequenz = 0;
+        $this->EncryptionChecked = false;
+        $this->EncRand = '';
+        $this->LastAppInfo = 0;
+        $this->InverterSerials = [];
         $this->DayVariableIsTimeStamp = false;
         $this->NightVariableIsTimeStamp = false;
         $this->DayVariableId = 1;
@@ -381,7 +394,7 @@ class HoymilesWiFiIO extends IPSModuleStrict
                 }
                 $Result = new \Hoymiles\CommandReqDTO();
                 $Result->mergeFromString($ResultStream);
-                $this->SendDebug('StartInverter Result', $Result->serializeToJsonString(), 0);
+                $this->SendDebug('StartInverter Result', $Result->serializeToJsonString(\Google\Protobuf\PrintOptions::EMIT_DEFAULTS), 0);
                 return serialize($Result->getErrCode() == 0);
             case 'StopInverter':
                 $Request = new \Hoymiles\CommandResDTO();
@@ -396,8 +409,28 @@ class HoymilesWiFiIO extends IPSModuleStrict
                 }
                 $Result = new \Hoymiles\CommandReqDTO();
                 $Result->mergeFromString($ResultStream);
-                $this->SendDebug('Stop Result', $Result->serializeToJsonString(), 0);
+                $this->SendDebug('Stop Result', $Result->serializeToJsonString(\Google\Protobuf\PrintOptions::EMIT_DEFAULTS), 0);
                 return serialize($Result->getErrCode() == 0);
+            case 'RebootDTU':
+                $Request = new \Hoymiles\CommandResDTO();
+                $Request->setTid(time());
+                $Request->setPackageNub(1);
+                $Request->setAction(\HoymilesWiFi\Inverter\Actions::DTU_REBOOT);
+                return serialize($this->SendCloudCommand($Request, 'RebootDTU'));
+            case 'RebootInverter':
+                $InverterSerials = $this->InverterSerials ?: [];
+                $Number = (int) $Data['Data'];
+                if (!isset($InverterSerials[$Number])) {
+                    trigger_error($this->Translate('Serial number of inverter is not known yet.'), E_USER_NOTICE);
+                    return serialize(false);
+                }
+                $Request = new \Hoymiles\CommandResDTO();
+                $Request->setTid(time());
+                $Request->setPackageNub(1);
+                $Request->setDevKind(\HoymilesWiFi\Inverter\DeviceKind::DTU);
+                $Request->setAction(\HoymilesWiFi\Inverter\Actions::INV_REBOOT);
+                $Request->setMiToSn([(int) $InverterSerials[$Number]]);
+                return serialize($this->SendCloudCommand($Request, 'RebootInverter'));
         }
         return '';
     }
@@ -501,7 +534,7 @@ class HoymilesWiFiIO extends IPSModuleStrict
      */
 
     /*
-        $Json = $Result->serializeToJsonString();
+        $Json = $Result->serializeToJsonString(\Google\Protobuf\PrintOptions::EMIT_DEFAULTS);
         $this->SendDebug('TEST', $Json, 0);
         $this->SendDebug('TEST', json_decode($Json, true), 0);
      */
@@ -767,42 +800,217 @@ class HoymilesWiFiIO extends IPSModuleStrict
         $this->NbrOfInverter = count($Inverters);
         $this->NbrOfSolarPort = count($SolarPorts);
 
+        // Zuordnung Nummer -> Seriennummer für AppInfo und Befehle an einzelne Wechselrichter
+        $InverterSerials = [];
         foreach ($Inverters as $Inverter) {
-            $this->SendDebug('Inverter:' . $Inverter->getVer(), $Inverter->serializeToJsonString(), 0);
+            $InverterSerials[$Inverter->getVer()] = (string) $Inverter->getSn();
+        }
+        $this->InverterSerials = $InverterSerials;
+
+        foreach ($Inverters as $Inverter) {
+            $this->SendDebug('Inverter:' . $Inverter->getVer(), $Inverter->serializeToJsonString(\Google\Protobuf\PrintOptions::EMIT_DEFAULTS), 0);
             $this->SendDataToChildren(
                 json_encode(
                     [
                         'DataID'     => \HoymilesWiFi\GUID::IoToInverter,
-                        'Data'       => $Inverter->serializeToJsonString()
+                        'Data'       => $Inverter->serializeToJsonString(\Google\Protobuf\PrintOptions::EMIT_DEFAULTS)
                     ]
                 )
             );
         }
         foreach ($SolarPorts as $SolarPort) {
-            $this->SendDebug('Solar:' . $SolarPort->getPi(), $SolarPort->serializeToJsonString(), 0);
+            $this->SendDebug('Solar:' . $SolarPort->getPi(), $SolarPort->serializeToJsonString(\Google\Protobuf\PrintOptions::EMIT_DEFAULTS), 0);
             $this->SendDataToChildren(
                 json_encode(
                     [
                         'DataID'     => \HoymilesWiFi\GUID::IoToSolarPort,
-                        'Data'       => $SolarPort->serializeToJsonString()
+                        'Data'       => $SolarPort->serializeToJsonString(\Google\Protobuf\PrintOptions::EMIT_DEFAULTS)
                     ]
                 )
             );
         }
+        if ((time() - (int) $this->LastAppInfo) >= \Hoymiles\DTU\AppInfo::Interval) {
+            $AppInfo = $this->RequestAppInfo();
+            if ($AppInfo) {
+                $this->ForwardAppInfo($AppInfo);
+            }
+        }
         return true;
     }
 
-    private function SendCommand(int $Command, string $RequestBytes): false|string
+    /**
+     * Fragt APPInfoData ab.
+     *
+     * @return array|false|null Daten, false bei Übertragungsfehler, null bei unbekanntem Format
+     */
+    private function RequestAppInfo(): array|false|null
+    {
+        $ResultStream = $this->SendCommand(\Hoymiles\DTU\Commands::InfoDataResDTO, \Hoymiles\DTU\AppInfo::BuildRequest(time()));
+        if ($ResultStream === false) {
+            return false;
+        }
+        $this->LastAppInfo = time();
+        $AppInfo = \Hoymiles\DTU\AppInfo::ParseResponse($ResultStream);
+        if ($AppInfo === false) {
+            $this->SendDebug('AppInfo', 'Invalid data', 0);
+            return null;
+        }
+        $DebugInfo = $AppInfo;
+        // Schlüsselmaterial nicht im Debug ausgeben
+        $DebugInfo['EncRand'] = $AppInfo['EncRand'] === '' ? '' : '*** (' . strlen($AppInfo['EncRand']) . ' bytes)';
+        $DebugInfo['Dfs'] = sprintf('0x%X', $AppInfo['Dfs']);
+        $DebugInfo['PvInfo'] = json_encode($AppInfo['PvInfo']);
+        $this->SendDebug('AppInfo', $DebugInfo, 0);
+        return $AppInfo;
+    }
+
+    /**
+     * Sendet Signalstärke und Versionen an DTU- und Inverter-Instanzen.
+     *
+     * @param array $AppInfo
+     * @return void
+     */
+    private function ForwardAppInfo(array $AppInfo): void
+    {
+        $DTU = json_encode([
+            \HoymilesWiFi\DTU\Variables::SignalStrength  => $AppInfo['SignalStrength'],
+            \HoymilesWiFi\DTU\Variables::SoftwareVersion => 'V' . \Hoymiles\DTU\AppInfo::FormatDtuVersion($AppInfo['DtuSwVersion']),
+            \HoymilesWiFi\DTU\Variables::HardwareVersion => 'H' . \Hoymiles\DTU\AppInfo::FormatDtuVersion($AppInfo['DtuHwVersion']),
+            \HoymilesWiFi\DTU\Variables::WifiVersion     => $AppInfo['WifiVersion']
+        ]);
+        $this->SendDebug('DTU Info', $DTU, 0);
+        $this->SendDataToChildren(
+            json_encode(
+                [
+                    'DataID'     => \HoymilesWiFi\GUID::IoToDTU,
+                    'Data'       => $DTU
+                ]
+            )
+        );
+        $InverterSerials = $this->InverterSerials ?: [];
+        foreach ($AppInfo['PvInfo'] as $PvInfo) {
+            $Number = array_search($PvInfo['SerialNumber'], $InverterSerials, true);
+            if ($Number === false) {
+                // Wechselrichter noch nicht aus RealData bekannt, beim nächsten Abruf erneut versuchen
+                $this->SendDebug('Inverter Info', 'Unknown serial number ' . $PvInfo['SerialNumber'], 0);
+                $this->LastAppInfo = 0;
+                continue;
+            }
+            // "ver" muss vor weiteren Feldern stehen, die Inverter-Instanz filtert auf "ver":Nummer,
+            $Inverter = json_encode([
+                'sn'                                              => $PvInfo['SerialNumber'],
+                'ver'                                             => $Number,
+                \HoymilesWiFi\Inverter\Variables::SoftwareVersion => 'V' . \Hoymiles\DTU\AppInfo::FormatInverterSwVersion($PvInfo['SwVersion']),
+                \HoymilesWiFi\Inverter\Variables::HardwareVersion => 'H' . \Hoymiles\DTU\AppInfo::FormatInverterHwVersion($PvInfo['HwVersion'])
+            ]);
+            $this->SendDebug('Inverter Info:' . $Number, $Inverter, 0);
+            $this->SendDataToChildren(
+                json_encode(
+                    [
+                        'DataID'     => \HoymilesWiFi\GUID::IoToInverter,
+                        'Data'       => $Inverter
+                    ]
+                )
+            );
+        }
+    }
+
+    /**
+     * Sendet einen Befehl per CloudCommandResDTO (wie hoymiles-wifi).
+     *
+     * @param \Hoymiles\CommandResDTO $Request
+     * @param string $DebugName
+     * @return bool true wenn die DTU den Befehl ohne Fehler bestätigt
+     */
+    private function SendCloudCommand(\Hoymiles\CommandResDTO $Request, string $DebugName): bool
+    {
+        $ResultStream = $this->SendCommand(\Hoymiles\DTU\Commands::CloudCommandResDTO, $Request->serializeToString());
+        if ($ResultStream === false) {
+            return false;
+        }
+        $Result = new \Hoymiles\CommandReqDTO();
+        $Result->mergeFromString($ResultStream);
+        $this->SendDebug($DebugName . ' Result', $Result->serializeToJsonString(\Google\Protobuf\PrintOptions::EMIT_DEFAULTS), 0);
+        if ($Result->getErrCode() != 0) {
+            trigger_error($this->Translate('DTU rejected the command. Error code: ') . $Result->getErrCode(), E_USER_NOTICE);
+            return false;
+        }
+        return true;
+    }
+
+    /**
+     * Fragt APPInfoData ab und ermittelt, ob die DTU verschlüsselt kommuniziert.
+     *
+     * @return bool true wenn der Zustand ermittelt wurde
+     */
+    private function CheckEncryption(): bool
+    {
+        $this->SendDebug(__FUNCTION__, 'Request AppInfo', 0);
+        $AppInfo = $this->RequestAppInfo();
+        if ($AppInfo === false) {
+            return false;
+        }
+        if ($AppInfo === null) {
+            // Unbekanntes Format, dann wie bisher unverschlüsselt arbeiten. Eine verschlüsselte Antwort führt später zur erneuten Prüfung.
+            $this->SendDebug(__FUNCTION__, 'Invalid AppInfo, assume DTU is not encrypted', 0);
+            $this->EncRand = '';
+            $this->EncryptionChecked = true;
+            return true;
+        }
+        // Versionen und Signalstärke beim nächsten RealData weiterleiten, dann sind die Seriennummern bekannt
+        $this->LastAppInfo = 0;
+        if (!\Hoymiles\DTU\Encryption::IsEncryptedDtu($AppInfo['Dfs'])) {
+            $this->SendDebug(__FUNCTION__, 'DTU is not encrypted', 0);
+            $this->EncRand = '';
+            $this->EncryptionChecked = true;
+            return true;
+        }
+        $this->SendDebug(__FUNCTION__, 'DTU is encrypted', 0);
+        if (strlen($AppInfo['EncRand']) != \Hoymiles\DTU\Encryption::EncRandLength) {
+            trigger_error($this->Translate('DTU uses encryption, but no valid key was received.'), E_USER_NOTICE);
+            return false;
+        }
+        if (!\Hoymiles\DTU\Encryption::IsAvailable()) {
+            trigger_error($this->Translate('DTU uses encryption, but PHP does not support AES-128-GCM.'), E_USER_NOTICE);
+            return false;
+        }
+        $this->EncRand = $AppInfo['EncRand'];
+        $this->EncryptionChecked = true;
+        return true;
+    }
+
+    private function SendCommand(int $Command, string $RequestBytes, bool $AllowRetry = true): false|string
     {
         $TriggerError = !$this->ReadPropertyBoolean(\HoymilesWiFi\IO\Property::SuppressConnectionError);
+        $EncryptCommand = \Hoymiles\DTU\Encryption::IsEncryptedCommand($Command);
+        if ($EncryptCommand && !$this->EncryptionChecked) {
+            if (!$this->CheckEncryption()) {
+                return false;
+            }
+        }
+        $EncRand = $EncryptCommand ? $this->EncRand : '';
+        $PlainRequestBytes = $RequestBytes;
         $this->SendDebug('SendCommand', pack('n', $Command), 1);
         $this->SendDebug('RequestBytes', $RequestBytes, 1);
-        $CRC16 = pack('n', $this->CRC16($RequestBytes));
-        $Len = strlen($RequestBytes) + 10;
         $this->lock(\HoymilesWiFi\IO\Locks::SendSequenz);
-        $Sequenz = ++$this->Sequenz;
-        $this->SendDebug('SendSequenz', pack('n', $Sequenz), 1);
+        $Sequenz = ($this->Sequenz + 1) & 0xFFFF;
+        $this->Sequenz = $Sequenz;
         $this->unlock(\HoymilesWiFi\IO\Locks::SendSequenz);
+        $this->SendDebug('SendSequenz', pack('n', $Sequenz), 1);
+        if ($EncRand !== '') {
+            $RequestBytes = \Hoymiles\DTU\Encryption::Encrypt($EncRand, $Command, $Sequenz, $RequestBytes);
+            if ($RequestBytes === false) {
+                trigger_error($this->Translate('Error on encrypt data.'), E_USER_NOTICE);
+                return false;
+            }
+            $this->SendDebug('RequestBytes encrypted', $RequestBytes, 1);
+            // CRC und Länge im Header ohne Auth-Tag
+            $CRC16 = pack('n', $this->CRC16(substr($RequestBytes, 0, -\Hoymiles\DTU\Encryption::TagLength)));
+            $Len = strlen($RequestBytes) - \Hoymiles\DTU\Encryption::TagLength + 10;
+        } else {
+            $CRC16 = pack('n', $this->CRC16($RequestBytes));
+            $Len = strlen($RequestBytes) + 10;
+        }
         $Content = \Hoymiles\DTU\SendStream::Header . pack('n', $Command) . pack('n', $Sequenz) . $CRC16 . pack('n', $Len) . $RequestBytes;
         $DeviceAddress = 'tcp://' . $this->ReadPropertyString(\HoymilesWiFi\IO\Property::Host) . ':' . $this->ReadPropertyInteger(\HoymilesWiFi\IO\Property::Port);
         $errno = 0;
@@ -837,8 +1045,7 @@ class HoymilesWiFiIO extends IPSModuleStrict
                     return false;
                 }
             }
-            $Data = '';
-            $Data = fread($fp, 8192);
+            $Data = $this->ReadFrame($fp, $EncRand !== '');
             fclose($fp);
         }
         if (!$Data) {
@@ -853,22 +1060,94 @@ class HoymilesWiFiIO extends IPSModuleStrict
             }
             return false;
         }
-        $Header = substr($Data, 0, 10);
-        $Payload = substr($Data, 10);
-        $this->SendDebug('Recv Command', substr($Header, 2, 2), 1);
-        $this->SendDebug('Recv Payload', $Payload, 1);
-        $this->SendDebug('Recv Sequenz', unpack('n', substr($Header, 4, 2))[1], 0);
-        $Len = unpack('n', substr($Header, 8, 2))[1];
-        if ($Len != strlen($Payload) + 10) {
+        if (strlen($Data) < 10) {
+            $this->SendDebug('Recv', $Data, 1);
             trigger_error($this->Translate('Data has wrong length.'), E_USER_NOTICE);
             return false;
         }
-        $CRC16 = pack('n', $this->CRC16($Payload));
+        $Header = substr($Data, 0, 10);
+        $Payload = substr($Data, 10);
+        $RecvCommand = unpack('n', substr($Header, 2, 2))[1];
+        $RecvSequenz = unpack('n', substr($Header, 4, 2))[1];
+        $Len = unpack('n', substr($Header, 8, 2))[1];
+        $EncryptedResponse = ($EncRand !== '') && \Hoymiles\DTU\Encryption::IsEncryptedCommand($RecvCommand);
+        $ExpectedLength = $Len + ($EncryptedResponse ? \Hoymiles\DTU\Encryption::TagLength : 0);
+        // Antworten mit Schlüsselmaterial nur ohne Nutzdaten ausgeben
+        $MaskPayload = in_array($RecvCommand, \Hoymiles\DTU\Encryption::SensitiveResponses, true);
+        $this->SendDebug('Recv', $MaskPayload ? $Header : $Data, 1);
+        $this->SendDebug('Recv Command', substr($Header, 2, 2), 1);
+        $this->SendDebug('Recv Sequenz', $RecvSequenz, 0);
+        $this->SendDebug('Recv Length', 'Header: ' . $Len . ' Expected: ' . $ExpectedLength . ' Received: ' . strlen($Data) . ' Encrypted: ' . ($EncryptedResponse ? 'yes' : 'no'), 0);
+        $this->SendDebug('Recv Payload', $MaskPayload ? '*** masked ***' : $Payload, $MaskPayload ? 0 : 1);
+        if (strlen($Data) != $ExpectedLength) {
+            // Antwort ist verschlüsselt, obwohl die DTU bisher als unverschlüsselt erkannt wurde (z.B. nach Firmware-Update)
+            if (($EncRand === '') && $EncryptCommand && (strlen($Data) == $Len + \Hoymiles\DTU\Encryption::TagLength)) {
+                $this->SendDebug('Encryption', 'Response looks encrypted, check encryption again', 0);
+                $this->EncryptionChecked = false;
+                if ($AllowRetry && $this->CheckEncryption() && ($this->EncRand !== '')) {
+                    return $this->SendCommand($Command, $PlainRequestBytes, false);
+                }
+            }
+            trigger_error($this->Translate('Data has wrong length.'), E_USER_NOTICE);
+            return false;
+        }
+        // CRC immer ohne Auth-Tag
+        $CRC16 = pack('n', $this->CRC16(substr($Data, 10, $Len - 10)));
         if ($CRC16 != substr($Header, 6, 2)) {
             trigger_error($this->Translate('Invalid checksum.'), E_USER_NOTICE);
             return false;
         }
+        if ($EncryptedResponse) {
+            $Payload = \Hoymiles\DTU\Encryption::Decrypt($EncRand, $RecvCommand, $RecvSequenz, $Payload);
+            if ($Payload === false) {
+                $this->SendDebug('Decrypt', 'failed', 0);
+                // Schlüssel könnte sich geändert haben, beim nächsten Request neu ermitteln
+                $this->EncryptionChecked = false;
+                trigger_error($this->Translate('Error on decrypt data.'), E_USER_NOTICE);
+                return false;
+            }
+            $this->SendDebug('Recv Payload decrypted', $Payload, 1);
+        }
         return $Payload;
+    }
+
+    /**
+     * Liest einen kompletten Frame anhand der Länge im Header.
+     *
+     * @param resource $fp
+     * @param bool $Encrypted true wenn ein Auth-Tag erwartet wird
+     * @return string Empfangene Daten (ggf. unvollständig)
+     */
+    private function ReadFrame($fp, bool $Encrypted): string
+    {
+        stream_set_timeout($fp, 5);
+        $Data = '';
+        $Expected = 10;
+        $HeaderParsed = false;
+        while (strlen($Data) < $Expected) {
+            $Chunk = @fread($fp, 8192);
+            if (($Chunk === false) || ($Chunk === '')) {
+                break;
+            }
+            $Data .= $Chunk;
+            if (!$HeaderParsed && (strlen($Data) >= 10)) {
+                $HeaderParsed = true;
+                $RecvCommand = unpack('n', substr($Data, 2, 2))[1];
+                $Expected = unpack('n', substr($Data, 8, 2))[1];
+                if ($Encrypted && \Hoymiles\DTU\Encryption::IsEncryptedCommand($RecvCommand)) {
+                    $Expected += \Hoymiles\DTU\Encryption::TagLength;
+                }
+            }
+        }
+        if (!$Encrypted && $HeaderParsed && !feof($fp)) {
+            // Nicht angekündigte Restdaten (z.B. Auth-Tag einer unerwartet verschlüsselten Antwort) noch abholen
+            stream_set_timeout($fp, 0, 200000);
+            $Chunk = @fread($fp, 8192);
+            if (is_string($Chunk)) {
+                $Data .= $Chunk;
+            }
+        }
+        return $Data;
     }
 
     private function CRC16(string $string): int

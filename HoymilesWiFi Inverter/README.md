@@ -1,7 +1,7 @@
 [![SDK](https://img.shields.io/badge/Symcon-PHPModul-red.svg)](https://www.symcon.de/service/dokumentation/entwicklerbereich/sdk-tools/sdk-php/)
-[![Version](https://img.shields.io/badge/Modul%20version-1.21-blue.svg)](https://community.symcon.de/t/modul-hoymiles-wifi-series-beta/135536/)
-[![Version](https://img.shields.io/badge/Symcon%20Version-8.1%20%3E-green.svg)](https://www.symcon.de/de/service/dokumentation/installation/migrationen/v80-v81-q3-2025/)  
-[![License](https://img.shields.io/badge/License-CC%20BY--NC--SA%204.0-green.svg)](https://creativecommons.org/licenses/by-nc-sa/4.0/)
+[![Module Version](https://img.shields.io/badge/dynamic/json?url=https%3A%2F%2Fraw.githubusercontent.com%2FNall-chan%2FHoymilesWiFi%2Frefs%2Fheads%2Fmaster%2Flibrary.json&query=%24.version&label=Modul%20Version&color=blue)](https://community.symcon.de/t/modul-hoymiles-wifi-series-beta/135536/)
+[![Symcon Version](https://img.shields.io/badge/dynamic/json?url=https%3A%2F%2Fraw.githubusercontent.com%2FNall-chan%2FHoymilesWiFi%2Frefs%2Fheads%2Fmaster%2Flibrary.json&query=%24.compatibility.version&suffix=%3E&label=Symcon%20Version&color=green)](https://www.symcon.de/de/service/dokumentation/installation/migrationen/v80-v81-q3-2025/)  
+[![License](https://img.shields.io/badge/License-Custom--NC--SA-green.svg)](#10-lizenz)
 [![Check Style](https://github.com/Nall-chan/HoymilesWiFi/workflows/Check%20Style/badge.svg)](https://github.com/Nall-chan/HoymilesWiFi/actions)
 [![Run Tests](https://github.com/Nall-chan/HoymilesWiFi/workflows/Run%20Tests/badge.svg)](https://github.com/Nall-chan/HoymilesWiFi/actions)  
 [![PayPal.Me](https://img.shields.io/badge/PayPal-Me-lightblue.svg)](#9-spenden)
@@ -61,16 +61,22 @@ Die Statusvariablen werden automatisch angelegt. Das Löschen einzelner kann zu 
 
 ### Statusvariablen
 
-| Name            | Typ     | Beschreibung                      |
-| --------------- | ------- | --------------------------------- |
-| Spannung        | float   | Spannung Ausgangsseite            |
-| Frequenz        | float   | Frequenz Ausgangsseite            |
-| Leistung        | float   | Abgegeben Leistung                |
-| Strom           | float   | Strom Ausgangsseite               |
-| Leistungsfaktor | float   | Leistungsfaktor                   |
-| Temperatur      | float   | Temperatur des Inverters          |
-| Link            | bool    | Inverter mit DTU verbunden        |
-| Leistungslimit  | integer | Einstellbares Limit des Inverters |
+| Name             | Typ     | Beschreibung                              |
+| ---------------- | ------- | ----------------------------------------- |
+| Spannung         | float   | Spannung Ausgangsseite                    |
+| Frequenz         | float   | Frequenz Ausgangsseite                    |
+| Leistung         | float   | Abgegeben Leistung                        |
+| Strom            | float   | Strom Ausgangsseite                       |
+| Leistungsfaktor  | float   | Leistungsfaktor                           |
+| Temperatur       | float   | Temperatur des Inverters                  |
+| Link             | bool    | Inverter mit DTU verbunden                |
+| Leistungslimit   | integer | Einstellbares Limit des Inverters         |
+| Blindleistung    | float   | Blindleistung Ausgangsseite (var)         |
+| Warnungen        | integer | Anzahl der Warnungen des Inverters        |
+| Software-Version | string  | Firmware des Inverters (z.B. `V01.00.08`) |
+| Hardware-Version | string  | Hardware des Inverters (z.B. `H00.04.00`) |
+
+Software- und Hardware-Version werden nach dem Start der IO-Instanz und danach alle 5 Minuten abgefragt.  
 
 ## 6. PHP-Befehlsreferenz
 
@@ -91,6 +97,20 @@ bool HMSWIFI_SetInverterState(integer $InstanzID, bool $State);
 
 Ein (`true`) oder ausschalten (`false`) des Inverters über den Parameter `State`.  
 
+---
+
+```php
+bool HMSWIFI_RebootInverter(integer $InstanzID);
+```
+
+Startet den Inverter neu.  
+Liefert `true`, wenn die DTU den Befehl bestätigt hat. Die IO-Instanz muss dafür nach ihrem Start mindestens einmal erfolgreich Daten abgerufen haben, damit die Seriennummer des Inverters bekannt ist.  
+In der Instanz-Konfiguration steht dafür die Schaltfläche `Wechselrichter neu starten` zur Verfügung.  
+
+```php
+HMSWIFI_RebootInverter(12345);
+```
+
 ## 8. Changelog
 
 siehe Changelog der [Hoymiles WiFi-Library](../README.md#2-changelog).  
@@ -105,4 +125,5 @@ Die Library ist für die nicht kommerzielle Nutzung kostenlos, Schenkungen als U
 
 ## 10. Lizenz
 
-[CC BY-NC-SA 4.0](https://creativecommons.org/licenses/by-nc-sa/4.0/)  
+IPS-Modul:  
+[Custom NC-SA](../LICENSE)

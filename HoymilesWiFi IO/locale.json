@@ -30,6 +30,18 @@
             "Interface closed": "Verbindung geschlossen",
             "Configuration invalid": "Konfiguration ungültig",
             "Connection lost": "Verbindung verloren",
+            "Instance is not active.": "Instanz ist nicht aktiv.",
+            "Error on connect": "Fehler beim Verbinden",
+            "Error on write": "Fehler beim Senden",
+            "Timeout": "Zeitüberschreitung",
+            "Data has wrong length.": "Daten haben falsche Länge.",
+            "Invalid checksum.": "Ungültige Prüfsumme.",
+            "DTU uses encryption, but no valid key was received.": "DTU nutzt Verschlüsselung, es wurde aber kein gültiger Schlüssel empfangen.",
+            "DTU uses encryption, but PHP does not support AES-128-GCM.": "DTU nutzt Verschlüsselung, PHP unterstützt aber kein AES-128-GCM.",
+            "Error on encrypt data.": "Fehler beim Verschlüsseln der Daten.",
+            "Error on decrypt data.": "Fehler beim Entschlüsseln der Daten.",
+            "Serial number of inverter is not known yet.": "Seriennummer des Wechselrichters ist noch nicht bekannt.",
+            "DTU rejected the command. Error code: ": "DTU hat den Befehl abgelehnt. Fehlercode: ",
             "This module is free for non-commercial use,\r\nDonations in support of the author are accepted here:": "Dieses Modul ist für die nicht kommerzielle Nutzung kostenlos,\r\nSchenkungen als Unterstützung für den Autor werden hier akzeptiert:"
         }
     }

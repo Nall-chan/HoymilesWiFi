@@ -1,6 +1,13 @@
 {
     "actions": [
         {
+            "type": "Button",
+            "caption": "Reboot DTU",
+            "onClick": "HMSWIFI_RebootDTU($id);",
+            "confirm": "Really reboot the DTU?",
+            "width": "200px"
+        },
+        {
             "type": "Label",
             "caption": "This module is free for non-commercial use,\r\nDonations in support of the author are accepted here:"
         },

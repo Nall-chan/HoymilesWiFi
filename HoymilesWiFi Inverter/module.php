@@ -9,6 +9,7 @@ eval('declare(strict_types=1);namespace HoymilesWiFiInverter {?>' . file_get_con
  * @method void SetValueBoolean(string $Ident, bool $value)
  * @method void SetValueInteger(string $Ident, int $value)
  * @method void SetValueFloat(string $Ident, float $value)
+ * @method void SetValueString(string $Ident, string $value)
  *
  */
 class HoymilesWiFiInverter extends IPSModuleStrict
@@ -96,6 +97,32 @@ class HoymilesWiFiInverter extends IPSModuleStrict
         return unserialize($ret);
     }
 
+    /**
+     * Startet den Wechselrichter neu.
+     *
+     * @return bool true wenn die DTU den Befehl bestätigt hat
+     */
+    public function RebootInverter(): bool
+    {
+        if (!$this->HasActiveParent()) {
+            trigger_error($this->Translate('Instance has no active parent'), E_USER_NOTICE);
+            return false;
+        }
+        $Number = $this->ReadPropertyInteger(\HoymilesWiFi\Inverter\Property::Number);
+        if (($Number < 1) || ($Number > 3)) {
+            return false;
+        }
+        $ret = $this->SendDataToParent(json_encode([
+            'DataID'   => \HoymilesWiFi\GUID::DeviceToIo,
+            'Function' => 'RebootInverter',
+            'Data'     => $Number
+        ]));
+        if ($ret === '') {
+            return false;
+        }
+        return unserialize($ret);
+    }
+
     private function DecodeData(array $DataValues): void
     {
         foreach ($DataValues as $Key => $Value) {
@@ -119,6 +146,9 @@ class HoymilesWiFiInverter extends IPSModuleStrict
                     break;
                 case VARIABLETYPE_BOOLEAN:
                     $this->SetValueBoolean($Key, (bool) $Value);
+                    break;
+                case VARIABLETYPE_STRING:
+                    $this->SetValueString($Key, (string) $Value);
                     break;
             }
         }

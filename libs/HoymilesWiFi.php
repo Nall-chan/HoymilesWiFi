@@ -89,6 +89,10 @@ namespace HoymilesWiFi\Inverter{
         public const INV_SHUTDOWN = 8194;
         public const INV_REBOOT = 8195;
     }
+    class DeviceKind
+    {
+        public const DTU = 1;
+    }
     class Property
     {
         public const Number = 'Number';
@@ -104,6 +108,10 @@ namespace HoymilesWiFi\Inverter{
         public const Temp = 'temp'; // 0.1 °C
         public const Link = 'link'; // bool ?
         public const PowerLimit = 'pLim'; // 0.1 %
+        public const ReactivePower = 'q'; // 0.1 var
+        public const Warnings = 'wnum';
+        public const SoftwareVersion = 'swVersion'; // aus AppInfo
+        public const HardwareVersion = 'hwVersion'; // aus AppInfo
         public static $Vars = [
             self::Voltage     => [
                 'Voltage',
@@ -245,6 +253,64 @@ namespace HoymilesWiFi\Inverter{
                 0.1,
                 true
             ],
+            self::ReactivePower => [
+                'Reactive power',
+                VARIABLETYPE_FLOAT,
+                [
+                    'ICON'                => 'bolt',
+                    'DECIMAL_SEPARATOR'   => 'Client',
+                    'COLOR'               => -1,
+                    'MIN'                 => 0,
+                    'DIGITS'              => 1,
+                    'MAX'                 => 0,
+                    'PRESENTATION'        => VARIABLE_PRESENTATION_VALUE_PRESENTATION,
+                    'INTERVALS'           => '[]',
+                    'INTERVALS_ACTIVE'    => false,
+                    'PERCENTAGE'          => false,
+                    'PREFIX'              => '',
+                    'SUFFIX'              => ' var',
+                    'THOUSANDS_SEPARATOR' => 'Client',
+                    'USAGE_TYPE'          => 0
+                ],
+                0.1
+            ],
+            self::Warnings => [
+                'Warnings',
+                VARIABLETYPE_INTEGER,
+                [
+                    'ICON'                => 'Warning',
+                    'DECIMAL_SEPARATOR'   => 'Client',
+                    'COLOR'               => -1,
+                    'MIN'                 => 0,
+                    'DIGITS'              => 0,
+                    'MAX'                 => 0,
+                    'PRESENTATION'        => VARIABLE_PRESENTATION_VALUE_PRESENTATION,
+                    'INTERVALS'           => '[]',
+                    'INTERVALS_ACTIVE'    => false,
+                    'PERCENTAGE'          => false,
+                    'PREFIX'              => '',
+                    'SUFFIX'              => '',
+                    'THOUSANDS_SEPARATOR' => '',
+                    'USAGE_TYPE'          => 0
+                ],
+                1
+            ],
+            self::SoftwareVersion => [
+                'Software version',
+                VARIABLETYPE_STRING,
+                [
+                    'PRESENTATION' => VARIABLE_PRESENTATION_VALUE_PRESENTATION,
+                    'ICON'         => 'Information'
+                ]
+            ],
+            self::HardwareVersion => [
+                'Hardware version',
+                VARIABLETYPE_STRING,
+                [
+                    'PRESENTATION' => VARIABLE_PRESENTATION_VALUE_PRESENTATION,
+                    'ICON'         => 'Information'
+                ]
+            ],
         ];
     }
 
@@ -272,6 +338,7 @@ namespace HoymilesWiFi\SolarPort{
         public const Power = 'p'; // 0.1 W
         public const EnergyTotal = 'et'; // Wh
         public const EnergyDaily = 'ed'; // Wh
+        // 'code' ist kein Fehlercode (drei Bytes aus dem Datenblock des WR, Bedeutung unbekannt), daher keine Variable
 
         public static $Vars = [
             self::Voltage => [
@@ -354,8 +421,56 @@ namespace HoymilesWiFi\DTU{
         public const Time = 'time'; // 0.01 A
         public const CurrentPower = 'pvCurrentPower'; // W 0.1
         public const DailyYield = 'pvDailyYield'; // Wh
+        public const SignalStrength = 'signal'; // % aus AppInfo
+        public const SoftwareVersion = 'swVersion'; // aus AppInfo
+        public const HardwareVersion = 'hwVersion'; // aus AppInfo
+        public const WifiVersion = 'wifiVersion'; // aus AppInfo
 
         public static $Vars = [
+            self::SignalStrength => [
+                'WiFi signal strength',
+                VARIABLETYPE_INTEGER,
+                [
+                    'ICON'                => 'Wifi',
+                    'DECIMAL_SEPARATOR'   => 'Client',
+                    'COLOR'               => -1,
+                    'MIN'                 => 0,
+                    'DIGITS'              => 0,
+                    'MAX'                 => 100,
+                    'PRESENTATION'        => VARIABLE_PRESENTATION_VALUE_PRESENTATION,
+                    'INTERVALS'           => '[]',
+                    'INTERVALS_ACTIVE'    => false,
+                    'PERCENTAGE'          => false,
+                    'PREFIX'              => '',
+                    'SUFFIX'              => ' %',
+                    'THOUSANDS_SEPARATOR' => '',
+                    'USAGE_TYPE'          => 0
+                ]
+            ],
+            self::SoftwareVersion => [
+                'Software version',
+                VARIABLETYPE_STRING,
+                [
+                    'PRESENTATION' => VARIABLE_PRESENTATION_VALUE_PRESENTATION,
+                    'ICON'         => 'Information'
+                ]
+            ],
+            self::HardwareVersion => [
+                'Hardware version',
+                VARIABLETYPE_STRING,
+                [
+                    'PRESENTATION' => VARIABLE_PRESENTATION_VALUE_PRESENTATION,
+                    'ICON'         => 'Information'
+                ]
+            ],
+            self::WifiVersion => [
+                'WiFi version',
+                VARIABLETYPE_STRING,
+                [
+                    'PRESENTATION' => VARIABLE_PRESENTATION_VALUE_PRESENTATION,
+                    'ICON'         => 'Information'
+                ]
+            ],
             self::Time         => [
                 'Time',
                 VARIABLETYPE_INTEGER,
@@ -437,5 +552,8 @@ namespace Hoymiles\DTU{
 
         public const AppGetHistPowerRes = 0xA315; // Response: AppGetHistPowerReq
         public const AppGetHistEDRes = 0xA316; // Response: AppGetHistEDReq
+
+        // CommandResDTO wie von der Cloud (Neustart DTU / Wechselrichter)
+        public const CloudCommandResDTO = 0x2305; // Response: 2205 CommandReqDTO
     }
 }
