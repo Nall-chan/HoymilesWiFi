@@ -53,7 +53,8 @@ class HoymilesWiFiInverter extends IPSModuleStrict
     public function ReceiveData(string $JSONString): string
     {
         $data = json_decode($JSONString);
-        $this->SendDebug('Receive', $data->Data, 0);        $this->DecodeData(json_decode($data->Data, true));
+        $this->SendDebug('Receive', $data->Data, 0);
+        $this->DecodeData(json_decode($data->Data, true));
         return '';
     }
 
