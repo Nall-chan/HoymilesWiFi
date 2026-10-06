@@ -64,6 +64,9 @@ eval('declare(strict_types=1);namespace HoymilesIO {?>' . file_get_contents(dirn
  * @property string $EncRand
  * @property int $LastAppInfo
  * @property array $InverterSerials
+ * @property array $WarnNumbers
+ * @property int $WarnTrigger
+ * @property int $LastWarnData
  * @property int $NbrOfInverter
  * @property int $NbrOfSolarPort
  * @property int $DayVariableId
@@ -94,6 +97,9 @@ class HoymilesWiFiIO extends IPSModuleStrict
         $this->EncRand = '';
         $this->LastAppInfo = 0;
         $this->InverterSerials = [];
+        $this->WarnNumbers = [];
+        $this->WarnTrigger = 0;
+        $this->LastWarnData = 0;
         $this->NbrOfInverter = 0;
         $this->NbrOfSolarPort = 0;
         $this->DayVariableId = 1;
@@ -152,6 +158,9 @@ class HoymilesWiFiIO extends IPSModuleStrict
         $this->EncRand = '';
         $this->LastAppInfo = 0;
         $this->InverterSerials = [];
+        $this->WarnNumbers = [];
+        $this->WarnTrigger = 0;
+        $this->LastWarnData = 0;
         $this->DayVariableIsTimeStamp = false;
         $this->NightVariableIsTimeStamp = false;
         $this->DayVariableId = 1;
@@ -835,7 +844,115 @@ class HoymilesWiFiIO extends IPSModuleStrict
                 $this->ForwardAppInfo($AppInfo);
             }
         }
+        $WarnNumbers = [];
+        foreach ($Inverters as $Inverter) {
+            $WarnNumbers[$Inverter->getVer()] = $Inverter->getWnum();
+        }
+        $this->CheckWarnings($WarnNumbers);
         return true;
+    }
+
+    /**
+     * Stößt bei geänderter Anzahl Warnungen (oder zyklisch) die Abfrage der Warnliste an
+     * und holt die Liste beim nächsten Abruf ab.
+     *
+     * @param array $WarnNumbers Nummer des Wechselrichters => wnum
+     * @return void
+     */
+    private function CheckWarnings(array $WarnNumbers): void
+    {
+        $Now = time();
+        if ($this->WarnTrigger > 0) {
+            if (($Now - $this->WarnTrigger) < \Hoymiles\DTU\WarnData::TriggerDelay) {
+                return;
+            }
+            $this->WarnTrigger = 0;
+            $Warnings = $this->RequestWarnData();
+            if ($Warnings !== false) {
+                $this->ForwardWarnings($Warnings);
+            }
+            return;
+        }
+        if (($WarnNumbers == $this->WarnNumbers) && (($Now - $this->LastWarnData) < \Hoymiles\DTU\WarnData::Interval)) {
+            return;
+        }
+        // Auch bei Fehlern erst nach Interval oder neuer Warnung erneut versuchen
+        $this->WarnNumbers = $WarnNumbers;
+        $this->LastWarnData = $Now;
+        $Request = new \Hoymiles\CommandResDTO();
+        $Request->setTime($Now);
+        $Request->setTid($Now);
+        $Request->setPackageNub(1);
+        $Request->setAction(\HoymilesWiFi\Inverter\Actions::ALARM_LIST);
+        $ResultStream = $this->SendCommand(\Hoymiles\DTU\Commands::CommandResDTO, $Request->serializeToString(), true, true);
+        if ($ResultStream === false) {
+            return;
+        }
+        $Result = new \Hoymiles\CommandReqDTO();
+        $Result->mergeFromString($ResultStream);
+        $this->SendDebug('AlarmList Result', $Result->serializeToJsonString(\Google\Protobuf\PrintOptions::EMIT_DEFAULTS), 0);
+        $this->WarnTrigger = $Now;
+    }
+
+    /**
+     * Holt alle Seiten der Warnliste ab.
+     *
+     * @return array|false Liste der Warnungen
+     */
+    private function RequestWarnData(): array|false
+    {
+        $Warnings = [];
+        $Package = 0;
+        do {
+            $ResultStream = $this->SendCommand(\Hoymiles\DTU\Commands::WarnResDTO, \Hoymiles\DTU\WarnData::BuildRequest(time(), $Package), true, true);
+            if ($ResultStream === false) {
+                return false;
+            }
+            $Result = \Hoymiles\DTU\WarnData::ParseResponse($ResultStream);
+            if ($Result === false) {
+                $this->SendDebug('WarnData', 'Invalid data', 0);
+                return false;
+            }
+            $this->SendDebug('WarnData', 'Package: ' . ($Result['PackageNow'] + 1) . '/' . $Result['PackageCount'] . ' WarnDevice: ' . $Result['WarnDevice'] . ' Entries: ' . count($Result['Warnings']), 0);
+            foreach ($Result['Warnings'] as $Warning) {
+                $this->SendDebug('Warning', json_encode($Warning), 0);
+            }
+            $Warnings = array_merge($Warnings, $Result['Warnings']);
+            $Package++;
+        } while (($Package < $Result['PackageCount']) && ($Package < \Hoymiles\DTU\WarnData::MaxPackages));
+        return $Warnings;
+    }
+
+    /**
+     * Verteilt die Warnliste an die Inverter-Instanzen.
+     *
+     * @param array $Warnings
+     * @return void
+     */
+    private function ForwardWarnings(array $Warnings): void
+    {
+        $InverterSerials = $this->InverterSerials ?: [];
+        foreach ($InverterSerials as $Number => $SerialNumber) {
+            $InverterWarnings = array_values(array_filter($Warnings, function ($Warning) use ($SerialNumber)
+            {
+                return $Warning['SerialNumber'] === $SerialNumber;
+            }));
+            // "ver" muss vor weiteren Feldern stehen, die Inverter-Instanz filtert auf "ver":Nummer,
+            $Inverter = json_encode([
+                'sn'                                          => $SerialNumber,
+                'ver'                                         => $Number,
+                \HoymilesWiFi\Inverter\Variables::WarningList => $InverterWarnings
+            ]);
+            $this->SendDebug('Inverter Warnings:' . $Number, $Inverter, 0);
+            $this->SendDataToChildren(
+                json_encode(
+                    [
+                        'DataID'     => \HoymilesWiFi\GUID::IoToInverter,
+                        'Data'       => $Inverter
+                    ]
+                )
+            );
+        }
     }
 
     /**
@@ -979,7 +1096,7 @@ class HoymilesWiFiIO extends IPSModuleStrict
         return true;
     }
 
-    private function SendCommand(int $Command, string $RequestBytes, bool $AllowRetry = true): false|string
+    private function SendCommand(int $Command, string $RequestBytes, bool $AllowRetry = true, bool $Quiet = false): false|string
     {
         $TriggerError = !$this->ReadPropertyBoolean(\HoymilesWiFi\IO\Property::SuppressConnectionError);
         $EncryptCommand = \Hoymiles\DTU\Encryption::IsEncryptedCommand($Command);
@@ -1000,7 +1117,7 @@ class HoymilesWiFiIO extends IPSModuleStrict
         if ($EncRand !== '') {
             $RequestBytes = \Hoymiles\DTU\Encryption::Encrypt($EncRand, $Command, $Sequenz, $RequestBytes);
             if ($RequestBytes === false) {
-                trigger_error($this->Translate('Error on encrypt data.'), E_USER_NOTICE);
+                $this->DataError($this->Translate('Error on encrypt data.'), $Quiet);
                 return false;
             }
             $this->SendDebug('RequestBytes encrypted', $RequestBytes, 1);
@@ -1018,14 +1135,7 @@ class HoymilesWiFiIO extends IPSModuleStrict
         $fp = @stream_socket_client($DeviceAddress, $errno, $errstr, 5);
         if (!$fp) {
             $this->SendDebug('ERROR (' . $errno . ')', $errstr, 0);
-            if ($TriggerError) {
-                trigger_error($this->Translate('Error on connect') . '(' . $errno . ') ' . $errstr, E_USER_NOTICE);
-            }
-            if ($this->CheckCondition()) {
-                $this->SetStatus(IS_EBASE + 2);
-            } else {
-                $this->SetInactive();
-            }
+            $this->ConnectionError($this->Translate('Error on connect') . '(' . $errno . ') ' . $errstr, $TriggerError, $Quiet);
             return false;
         } else {
             $this->SendDebug('Send', $Content, 1);
@@ -1034,14 +1144,7 @@ class HoymilesWiFiIO extends IPSModuleStrict
                 if ($fwrite === false) {
                     $this->SendDebug('ERROR on write (' . $errno . ')', $errstr, 0);
                     @fclose($fp);
-                    if ($TriggerError) {
-                        trigger_error($this->Translate('Error on write') . '(' . $errno . ') ' . $errstr, E_USER_NOTICE);
-                    }
-                    if ($this->CheckCondition()) {
-                        $this->SetStatus(IS_EBASE + 2);
-                    } else {
-                        $this->SetInactive();
-                    }
+                    $this->ConnectionError($this->Translate('Error on write') . '(' . $errno . ') ' . $errstr, $TriggerError, $Quiet);
                     return false;
                 }
             }
@@ -1050,19 +1153,12 @@ class HoymilesWiFiIO extends IPSModuleStrict
         }
         if (!$Data) {
             $this->SendDebug('ERROR (0)', 'Timeout', 0);
-            if ($TriggerError) {
-                trigger_error($this->Translate('Timeout'), E_USER_NOTICE);
-            }
-            if ($this->CheckCondition()) {
-                $this->SetStatus(IS_EBASE + 2);
-            } else {
-                $this->SetInactive();
-            }
+            $this->ConnectionError($this->Translate('Timeout'), $TriggerError, $Quiet);
             return false;
         }
         if (strlen($Data) < 10) {
             $this->SendDebug('Recv', $Data, 1);
-            trigger_error($this->Translate('Data has wrong length.'), E_USER_NOTICE);
+            $this->DataError($this->Translate('Data has wrong length.'), $Quiet);
             return false;
         }
         $Header = substr($Data, 0, 10);
@@ -1085,16 +1181,16 @@ class HoymilesWiFiIO extends IPSModuleStrict
                 $this->SendDebug('Encryption', 'Response looks encrypted, check encryption again', 0);
                 $this->EncryptionChecked = false;
                 if ($AllowRetry && $this->CheckEncryption() && ($this->EncRand !== '')) {
-                    return $this->SendCommand($Command, $PlainRequestBytes, false);
+                    return $this->SendCommand($Command, $PlainRequestBytes, false, $Quiet);
                 }
             }
-            trigger_error($this->Translate('Data has wrong length.'), E_USER_NOTICE);
+            $this->DataError($this->Translate('Data has wrong length.'), $Quiet);
             return false;
         }
         // CRC immer ohne Auth-Tag
         $CRC16 = pack('n', $this->CRC16(substr($Data, 10, $Len - 10)));
         if ($CRC16 != substr($Header, 6, 2)) {
-            trigger_error($this->Translate('Invalid checksum.'), E_USER_NOTICE);
+            $this->DataError($this->Translate('Invalid checksum.'), $Quiet);
             return false;
         }
         if ($EncryptedResponse) {
@@ -1103,12 +1199,53 @@ class HoymilesWiFiIO extends IPSModuleStrict
                 $this->SendDebug('Decrypt', 'failed', 0);
                 // Schlüssel könnte sich geändert haben, beim nächsten Request neu ermitteln
                 $this->EncryptionChecked = false;
-                trigger_error($this->Translate('Error on decrypt data.'), E_USER_NOTICE);
+                $this->DataError($this->Translate('Error on decrypt data.'), $Quiet);
                 return false;
             }
             $this->SendDebug('Recv Payload decrypted', $Payload, 1);
         }
         return $Payload;
+    }
+
+    /**
+     * Verbindungsfehler melden und Status setzen.
+     * Bei $Quiet (optionale Abfragen wie die Warnliste) nur Debug, kein Statuswechsel.
+     *
+     * @param string $Message
+     * @param bool $TriggerError
+     * @param bool $Quiet
+     * @return void
+     */
+    private function ConnectionError(string $Message, bool $TriggerError, bool $Quiet): void
+    {
+        if ($Quiet) {
+            $this->SendDebug('ERROR (quiet)', $Message, 0);
+            return;
+        }
+        if ($TriggerError) {
+            trigger_error($Message, E_USER_NOTICE);
+        }
+        if ($this->CheckCondition()) {
+            $this->SetStatus(IS_EBASE + 2);
+        } else {
+            $this->SetInactive();
+        }
+    }
+
+    /**
+     * Fehler in den empfangenen Daten melden, bei $Quiet nur im Debug.
+     *
+     * @param string $Message
+     * @param bool $Quiet
+     * @return void
+     */
+    private function DataError(string $Message, bool $Quiet): void
+    {
+        if ($Quiet) {
+            $this->SendDebug('ERROR (quiet)', $Message, 0);
+            return;
+        }
+        trigger_error($Message, E_USER_NOTICE);
     }
 
     /**

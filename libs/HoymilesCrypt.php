@@ -265,6 +265,30 @@ namespace Hoymiles\DTU{
             return $Fields;
         }
 
+        /**
+         * Erster Varint-Wert eines Feldes aus DecodeFields, sonst 0.
+         *
+         * @param array $Fields
+         * @param int $Field
+         * @return int
+         */
+        public static function IntValue(array $Fields, int $Field): int
+        {
+            return (isset($Fields[$Field][0]) && is_int($Fields[$Field][0])) ? $Fields[$Field][0] : 0;
+        }
+
+        /**
+         * Erster String-Wert eines Feldes aus DecodeFields, sonst ''.
+         *
+         * @param array $Fields
+         * @param int $Field
+         * @return string
+         */
+        public static function StringValue(array $Fields, int $Field): string
+        {
+            return (isset($Fields[$Field][0]) && is_string($Fields[$Field][0])) ? $Fields[$Field][0] : '';
+        }
+
         private static function DecodeVarint(string $Data, int &$Pos): int|false
         {
             $Result = 0;
@@ -334,23 +358,23 @@ namespace Hoymiles\DTU{
                     return false;
                 }
                 $PvInfo[] = [
-                    'SerialNumber' => (string) self::IntValue($Pv, 2),
-                    'SwVersion'    => self::IntValue($Pv, 4),
-                    'HwVersion'    => self::IntValue($Pv, 6)
+                    'SerialNumber' => (string) Protobuf::IntValue($Pv, 2),
+                    'SwVersion'    => Protobuf::IntValue($Pv, 4),
+                    'HwVersion'    => Protobuf::IntValue($Pv, 6)
                 ];
             }
             return [
-                'DtuSerialNumber' => self::StringValue($Fields, 1),
-                'DeviceNumber'    => self::IntValue($Fields, 3),
-                'PvNumber'        => self::IntValue($Fields, 4),
-                'DeviceKind'      => self::IntValue($DtuInfo, 1),
-                'DtuSwVersion'    => self::IntValue($DtuInfo, 2),
-                'DtuHwVersion'    => self::IntValue($DtuInfo, 3),
-                'SignalStrength'  => self::IntValue($DtuInfo, 9),
-                'WifiVersion'     => self::StringValue($DtuInfo, 11),
-                'Dfs'             => self::IntValue($DtuInfo, 24),
-                'Type'            => self::IntValue($DtuInfo, 26),
-                'EncRand'         => self::StringValue($DtuInfo, 27),
+                'DtuSerialNumber' => Protobuf::StringValue($Fields, 1),
+                'DeviceNumber'    => Protobuf::IntValue($Fields, 3),
+                'PvNumber'        => Protobuf::IntValue($Fields, 4),
+                'DeviceKind'      => Protobuf::IntValue($DtuInfo, 1),
+                'DtuSwVersion'    => Protobuf::IntValue($DtuInfo, 2),
+                'DtuHwVersion'    => Protobuf::IntValue($DtuInfo, 3),
+                'SignalStrength'  => Protobuf::IntValue($DtuInfo, 9),
+                'WifiVersion'     => Protobuf::StringValue($DtuInfo, 11),
+                'Dfs'             => Protobuf::IntValue($DtuInfo, 24),
+                'Type'            => Protobuf::IntValue($DtuInfo, 26),
+                'EncRand'         => Protobuf::StringValue($DtuInfo, 27),
                 'PvInfo'          => $PvInfo
             ];
         }
@@ -387,15 +411,78 @@ namespace Hoymiles\DTU{
         {
             return sprintf('%02d.%02d.%02d', intdiv($Version, 2048), intdiv($Version, 64) % 32, $Version % 64);
         }
+    }
 
-        private static function IntValue(array $Fields, int $Field): int
+    /**
+     * Warnliste der Wechselrichter (Kommando 0xA304 WarnResDTO / Antwort 0xA204 WarnReqDTO).
+     *
+     * Die DTU liefert die Liste seitenweise, package_now ist 0-basiert, package_nub die Anzahl der Seiten.
+     * Mit Action 50 (ALARM_LIST) wird die DTU vorher angestoßen, die Warnungen beim Wechselrichter abzufragen.
+     * Feldnummern nach ioBroker.hoymiles (src/lib/proto/WarnData.proto, MIT, Copyright Eistee82).
+     */
+    class WarnData
+    {
+        // Wartezeit in Sekunden zwischen Action 50 und Abholen der Liste
+        public const TriggerDelay = 5;
+        // Spätestens nach dieser Zeit in Sekunden die Liste erneut abholen
+        public const Interval = 300;
+        // Schutz gegen Endlosschleifen bei fehlerhaften Seitenangaben
+        public const MaxPackages = 20;
+
+        /**
+         * Erzeugt einen WarnResDTO Request für eine Seite der Warnliste.
+         *
+         * @param int $Time Unix-Timestamp
+         * @param int $PackageNow 0-basierte Seite
+         * @return string Protobuf-Daten
+         */
+        public static function BuildRequest(int $Time, int $PackageNow): string
         {
-            return (isset($Fields[$Field][0]) && is_int($Fields[$Field][0])) ? $Fields[$Field][0] : 0;
+            return Protobuf::EncodeBytesField(1, date('Y-m-d H:i:s', $Time)) // ymd_hms
+                . Protobuf::EncodeVarintField(2, $PackageNow)                // package_now
+                . Protobuf::EncodeVarintField(4, AppInfo::Offset)            // offset
+                . Protobuf::EncodeVarintField(5, $Time);                      // time
         }
 
-        private static function StringValue(array $Fields, int $Field): string
+        /**
+         * Wertet einen WarnReqDTO aus.
+         *
+         * @param string $Data Protobuf-Daten
+         * @return array|false
+         */
+        public static function ParseResponse(string $Data): array|false
         {
-            return (isset($Fields[$Field][0]) && is_string($Fields[$Field][0])) ? $Fields[$Field][0] : '';
+            $Fields = Protobuf::DecodeFields($Data);
+            if ($Fields === false) {
+                return false;
+            }
+            $Warnings = [];
+            foreach ($Fields[6] ?? [] as $WarnData) {
+                if (!is_string($WarnData)) {
+                    return false;
+                }
+                $Warn = Protobuf::DecodeFields($WarnData);
+                if ($Warn === false) {
+                    return false;
+                }
+                $Warnings[] = [
+                    'SerialNumber' => (string) Protobuf::IntValue($Warn, 1),
+                    'Code'         => Protobuf::IntValue($Warn, 2),
+                    'Number'       => Protobuf::IntValue($Warn, 3),
+                    'StartTime'    => Protobuf::IntValue($Warn, 4),
+                    'EndTime'      => Protobuf::IntValue($Warn, 5),
+                    'Data1'        => Protobuf::IntValue($Warn, 6),
+                    'Data2'        => Protobuf::IntValue($Warn, 7)
+                ];
+            }
+            return [
+                'DtuSerialNumber' => Protobuf::StringValue($Fields, 1),
+                'Time'            => Protobuf::IntValue($Fields, 2),
+                'PackageCount'    => max(Protobuf::IntValue($Fields, 3), 1),
+                'PackageNow'      => Protobuf::IntValue($Fields, 4),
+                'WarnDevice'      => Protobuf::IntValue($Fields, 5),
+                'Warnings'        => $Warnings
+            ];
         }
     }
 }

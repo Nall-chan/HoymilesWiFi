@@ -75,6 +75,18 @@ Dadurch wird automatisch der benötigte [IO](HoymilesWiFi%20IO/README.md) erstel
 
 ### 2. Changelog
 
+**Version 1.24:**  
+
+- Neue Statusvariablen Inverter: Aktive Warnungen, Aktuelle Warnung und Letzte Warnung  
+- Neue Instanz-Funktion `HMSWIFI_GetWarnings` liefert die Warnliste des Inverters  
+- Fehler bei der Abfrage der Warnliste werden nur im Debug ausgegeben und ändern nicht den Status des IO  
+- Fix: Leistungslimit sprang auf 0 %, wenn die DTU kein Limit mitgeliefert hat  
+- Leistungslimit kann nur noch im gültigen Bereich von 2 bis 100 % gesetzt werden  
+- Statusvariable Inverter `Warnungen` heißt jetzt `Warnungen gesamt` (bestehende Variable bei Bedarf selbst umbenennen)  
+- Fix: Leistungsfaktor wird als cos φ ohne Einheit dargestellt (vorher fälschlich in %)  
+- Fix: Schaltfläche `Wechselrichter neu starten` war zu schmal  
+- Fix: Ungültige Parameter der Darstellung von Leistungsfaktor und Link entfernt  
+
 **Version 1.23:**  
 
 - Unterstützung für DTUs mit verschlüsselter Kommunikation (neuere DTU-Firmware, Fehler `Data has wrong length.`)  
@@ -119,5 +131,11 @@ Dadurch wird automatisch der benötigte [IO](HoymilesWiFi%20IO/README.md) erstel
 
 ## 7. Lizenz
 
-IPS-Modul:  
+**IPS-Modul:**  
 [Custom NC-SA](LICENSE)
+
+**Klartexte der Warn-/Alarmcodes der Hoymiles Wechselrichter**
+ 
+- **Quelle:** ioBroker.hoymiles (https://github.com/Eistee82/ioBroker.hoymiles) (src/lib/alarmCodes.ts und src/lib/alarmCodesData.ts)
+- **MIT License, Copyright (c) Eistee82**
+- **Die Texte stammen dort aus dem Hoymiles-Cloud-Wörterbuch (mwc) und der warn_code.json der S-Miles App.**

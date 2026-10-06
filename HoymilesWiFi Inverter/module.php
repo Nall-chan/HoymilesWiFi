@@ -3,6 +3,7 @@
 declare(strict_types=1);
 
 require_once dirname(__DIR__) . '/libs/HoymilesWiFi.php';
+require_once dirname(__DIR__) . '/libs/HoymilesWarnCodes.php';
 eval('declare(strict_types=1);namespace HoymilesWiFiInverter {?>' . file_get_contents(dirname(__DIR__) . '/libs/helper/VariableHelper.php') . '}');
 
 /**
@@ -52,8 +53,7 @@ class HoymilesWiFiInverter extends IPSModuleStrict
     public function ReceiveData(string $JSONString): string
     {
         $data = json_decode($JSONString);
-        $this->SendDebug('Receive', $data->Data, 0);
-        $this->DecodeData(json_decode($data->Data, true));
+        $this->SendDebug('Receive', $data->Data, 0);        $this->DecodeData(json_decode($data->Data, true));
         return '';
     }
 
@@ -61,6 +61,11 @@ class HoymilesWiFiInverter extends IPSModuleStrict
     {
         if (!$this->HasActiveParent() || (@IPS_GetInstance($this->InstanceID)['ConnectionID'] < 10000)) {
             trigger_error($this->Translate('Instance has no active parent'), E_USER_NOTICE);
+            return false;
+        }
+        if (($Limit < \HoymilesWiFi\Inverter\SetPowerLimit::Min) || ($Limit > \HoymilesWiFi\Inverter\SetPowerLimit::Max)) {
+            trigger_error(sprintf($this->Translate('Power limit must be between %d and %d %%.'), \HoymilesWiFi\Inverter\SetPowerLimit::Min, \HoymilesWiFi\Inverter\SetPowerLimit::Max), E_USER_NOTICE);
+            return false;
         }
         $Number = $this->ReadPropertyInteger(\HoymilesWiFi\Inverter\Property::Number);
         if (($Number < 1) || ($Number > 3)) {
@@ -123,8 +128,58 @@ class HoymilesWiFiInverter extends IPSModuleStrict
         return unserialize($ret);
     }
 
+    /**
+     * Liefert die zuletzt von der DTU gelesene Warnliste des Wechselrichters.
+     *
+     * @return array Liste der Warnungen mit Code, Text, Start- und Endzeit
+     */
+    public function GetWarnings(): array
+    {
+        $Warnings = json_decode($this->GetBuffer(\HoymilesWiFi\Inverter\Variables::WarningList), true);
+        return is_array($Warnings) ? $Warnings : [];
+    }
+
+    /**
+     * Bereitet die Warnliste für die Variablen auf.
+     *
+     * @param array $Warnings
+     * @return array Ident => Wert
+     */
+    private function DecodeWarnings(array $Warnings): array
+    {
+        $German = str_starts_with(IPS_GetSystemLanguage(), 'de');
+        $ActiveTexts = [];
+        $Last = null;
+        foreach ($Warnings as &$Warning) {
+            $Warning['Text'] = \Hoymiles\DTU\WarnCodes::GetText($Warning['Code'], $German);
+            $Warning['Active'] = ($Warning['EndTime'] == 0);
+            if ($Warning['Active']) {
+                $ActiveTexts[$Warning['Code']] = $Warning['Text'];
+            }
+            if (($Last === null) || ($Warning['StartTime'] >= $Last['StartTime'])) {
+                $Last = $Warning;
+            }
+        }
+        unset($Warning);
+        $this->SetBuffer(\HoymilesWiFi\Inverter\Variables::WarningList, json_encode($Warnings));
+        $Values = [
+            \HoymilesWiFi\Inverter\Variables::ActiveWarnings => count(array_filter($Warnings, function ($Warning)
+            {
+                return $Warning['Active'];
+            })),
+            \HoymilesWiFi\Inverter\Variables::CurrentWarning => implode(', ', $ActiveTexts)
+        ];
+        if ($Last !== null) {
+            $Values[\HoymilesWiFi\Inverter\Variables::LastWarning] = $Last['Text'] . ' (Code ' . $Last['Code'] . ')';
+        }
+        return $Values;
+    }
+
     private function DecodeData(array $DataValues): void
     {
+        if (isset($DataValues[\HoymilesWiFi\Inverter\Variables::WarningList])) {
+            $DataValues = array_merge($DataValues, $this->DecodeWarnings($DataValues[\HoymilesWiFi\Inverter\Variables::WarningList]));
+        }
         foreach ($DataValues as $Key => $Value) {
             if (!array_key_exists($Key, \HoymilesWiFi\Inverter\Variables::$Vars)) {
                 continue;
@@ -135,6 +190,11 @@ class HoymilesWiFiInverter extends IPSModuleStrict
                 if ($Var[4]) {
                     $this->EnableAction($Key);
                 }
+            }
+            // Proto3 überträgt 0 nicht, ein fehlendes Leistungslimit (z.B. beim Anlaufen des WR) ist nicht 0 %.
+            // Ein echtes Limit ist mindestens 2 % (SetPowerLimit::Min).
+            if (($Key == \HoymilesWiFi\Inverter\Variables::PowerLimit) && ($Value == 0)) {
+                continue;
             }
 
             switch ($Var[1]) {

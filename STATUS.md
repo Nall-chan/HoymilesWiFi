@@ -29,20 +29,32 @@ Anlass: Forum https://community.symcon.de/t/modul-hoymiles-wifi-series/135536/74
 - Debug: Rohdaten der Antwort 0xA201 (enthält `enc_rand`) werden maskiert, `EncRand` nur mit Länge ausgegeben.
 - Test-Stubs (alt) leiten `SendDataToChildren` ohne DataID-Prüfung an alle Kinder weiter; im Harness landeten dadurch Inverter-Versionen in der DTU-Instanz. Live-Routing in Symcon prüfen.
 
+## Rückmeldung Forum (Beitrag 80-84) und Fixes (Version 1.24)
+
+- power1625 (DTU V01.01.01, WR V01.03.09, verschlüsselt): Version 1.23 funktioniert.
+- Leistungslimit 0 %: DTU lässt `pLim` (Feld 13) im InverterState zeitweise weg (morgens beim Anlaufen, abends; live bei uns 17:33-17:50 beobachtet, App zeigte 100 %). Proto3 überträgt 0 nicht, „fehlt“ und „0 %“ sind auf der Leitung nicht unterscheidbar. Die alte Runtime war gepatcht (`existField` immer true) und hatte dasselbe Verhalten. Fix: Inverter ignoriert `pLim == 0` (wie ioBroker `powerLimitEcho`). Gültiger Bereich ist 2-100 % (ioBroker `POWER_LIMIT_MIN`), `SetPowerLimit` prüft das jetzt; ein echtes 0 % gibt es nicht.
+- Leistungsfaktor: Rohwert ist cos φ x 1000 (live 949 bei 328 W / 108 var = 0,95; ioBroker `SCALE_POWER_FACTOR = 1000`). Jetzt Faktor 0.001, 3 Nachkommastellen, -1..1, ohne Einheit.
+- Darstellung: `MaintainVariable` prüft die Parameter nur bei geänderter Darstellung. `MULTILINE` gibt es nur für String, für Boolean nur `OPTIONS` + allgemeine Parameter (`IPS_GetPresentation` der Wertanzeige). Beim Leistungsfaktor und Link bereinigt.
+- Button „Wechselrichter neu starten“ 300px breit.
+
+## Warnungen / Alarme des Wechselrichters (Version 1.24, live nur teilweise geprüft)
+
+Quelle: ioBroker-Adapter https://github.com/Eistee82/ioBroker.hoymiles (MIT, Copyright Eistee82). Klartexte in `libs/HoymilesWarnCodes.php` (223 Codes, en/de, generiert aus `alarmCodes.ts` + `alarmCodesData.ts`, Cloud-Wörterbuch hat Vorrang), Hinweis im Dateikopf.
+
+- Ablauf im IO (`CheckWarnings`): ändert sich `wnum` eines WR oder sind 300 s vergangen, wird Action 50 (`ALARM_LIST`, 0xA305) gesendet. Beim nächsten RealData (frühestens nach 5 s) wird die Liste per 0xA304 (`WarnResDTO`: ymd_hms 1, package_now 2, offset 4, time 5) abgeholt; Antwort 0xA204 `WarnReqDTO` (dtu_sn 1, time 2, package_nub 3, package_now 4, warn_device 5, warns 6: pv_sn 1, code 2, num 3, s_time 4, e_time 5, w_data1 6, w_data2 7). Folgeseiten bis `package_nub` (max. 20).
+- ioBroker hält die Verbindung offen und bekommt 0xA204 nach Action 50 als Push. Live geprüft (06.10.2026, DTU V00.01.11 im HMS-2T): die DTU schließt die Verbindung nach **jeder** Antwort (auch nach Heartbeat 0xA302), ein Push ist damit nicht möglich. Der direkte Pull per 0xA304 (wie S-Miles) liefert nur `dtu_sn`, `time`, `warn_device` 15 und keine Einträge, auch direkt nachdem `wnum` von 6 auf 7 gestiegen war und nach Action 50 bzw. Action 46 (`READ_MI_HU_WARN`). Die S-Miles App zeigte zur selben Zeit ebenfalls keine Alarme (weder DTU noch Inverter), die leere Liste ist also vermutlich korrekt; `wnum` zählt auch Ereignisse, die die App nicht als Alarm zeigt (Sprung 6 -> 7 um 18:25 beim Abregeln, evtl. Code 38). Offen: mit einem echten Alarm in der App prüfen, ob er lokal per 0xA304 kommt. Die Implementierung bleibt drin; das Debug der IO (`WarnData`, `Warning`) zeigt bei anderen DTUs (z.B. power1625, V01.01.01), ob dort Einträge kommen. Heartbeat-Antwort 0xA202: offset 1, time 2, csq 3 (-27), dtu_sn 4, Feld 6 unbekannt.
+- Action 50 und 0xA304 laufen mit `SendCommand(..., $Quiet = true)`: Fehler nur im Debug (`ERROR (quiet)`), kein `trigger_error`, kein Statuswechsel. Grund: ungetestet, ob verschlüsselte DTUs diese Kommandos beantworten.
+- Verteilung an die Inverter über `pv_sn` -> `InverterSerials`. Inverter: Variablen `wActive` (aktive = `e_time` 0), `wText` (Texte der aktiven), `wLast` (neueste nach `s_time`), Liste im Buffer, `HMSWIFI_GetWarnings()`.
+- Unklar: Format von `s_time`/`e_time` (ioBroker nimmt Unix-Sekunden an), Bedeutung `warn_device`. Mit echten Einträgen prüfen.
+- `wnum` ist kein Code, sondern ein Zähler (laut ioBroker die Anzahl der Warnungen im WR). User sieht 38, wir 6.
+- Offen im Backlog: Warnungen löschen (Action 42 `CLEAN_WARN`), Erdschluss löschen (Action 10), Sperren/Entsperren (Action 12/13), Wirk-/Blindleistungs-Limit (Action 47/48). BLE-only Geräte (2WB) lehnen Action 50 ab, nicht relevant.
+
 ## Backlog
 
-### Warnungen / Alarme des Wechselrichters
-
-Quelle: ioBroker-Adapter https://github.com/Eistee82/ioBroker.hoymiles (MIT, Copyright Eistee82; bei Übernahme von Code oder Tabellen den Hinweis erhalten).
-
-- Action 50 (`ALARM_LIST`, 0xA305) liefert nur eine Quittung. Die Alarme kommen danach als `AlarmData` (`WInfoReqDTO`) mit Antwort-Tag 0xA204: je Eintrag `pv_sn`, `WCode`, `WNum`, `WTime1`, `WTime2`, `WData1`, `WData2` (`src/lib/proto/AlarmData.proto`). Der Adapter hält dafür eine Verbindung offen; prüfen, ob die DTU die Daten auch auf einer neuen Verbindung liefert.
-- Zusätzlich `WarnData` (`WarnReqDTO`, `src/lib/proto/WarnData.proto`): seitenweise Liste, `package_now` 0-basiert, `package_nub` Anzahl; Folgeseiten aktiv nachfordern (`encodeWarnDataRequest`).
-- Klartexte: 168 Codes in `src/lib/alarmCodes.ts` / `alarmCodesData.ts` (aus Hoymiles-Cloud-Wörterbuch `mwc` und S-Miles `warn_code.json`, de/en u.a.).
-- Ziel: zur Variable „Warnungen“ (`wnum`) Code und Text der aktiven Warnungen liefern.
-- Weitere Aktionen dort: Warnungen löschen (Action 42 `CLEAN_WARN`), Erdschluss löschen (Action 10), Sperren/Entsperren (Action 12/13), Wirk-/Blindleistungs-Limit (Action 47/48).
-- BLE-only Geräte (2WB) lehnen Action 50 ab (Fehler 1), nicht relevant für WLAN-DTU.
-
 ### Kleinere Punkte
+
+- Datenalter erkennen über `miSignal` (InverterState Feld 20): Bei eingefrorenen Daten (06.10.2026 ab 18:40:34, WR abgeschaltet, DTU antwortet weiter mit dem letzten Stand) blieb das untere Byte konstant (0x8E), das obere stieg je Abfrage um ca. 0x0F (0x82 -> 0x91 -> 0xA0 -> 0xAE -> 0xBD bei ~11 s Abstand). Tagsüber z.B. 0x440081, 0x8000B4. Vermutung: Alter der WR-Daten bzw. Zähler seit letztem Kontakt. Morgen beim Anlaufen gegen echte Werte prüfen; falls bestätigt, eingefrorene Daten erkennen (z.B. über `Link`).
+- Testgeräte: HMS-xxxW-2T mit in den WR integrierter WLAN-DTU. DTU und WR gehen gemeinsam offline, wenn der WR abschaltet; vorher liefert die DTU noch eine Weile den letzten Datenstand.
 
 - GetConfig (0xA309): enthält WLAN-SSID/-Passwort, AP-Passwort, Sperr-Passwort, Server. Signalstärke kommt bereits aus AppInfo; nur umsetzen, wenn weitere Werte (IP, DHCP, Zero-Export) gebraucht werden, dann Rohdaten im Debug maskieren.
 - Start/Stop des Wechselrichters: hoymiles-wifi nutzt 0x2305 mit `mi_to_sn` und `dev_kind`, das Modul 0xA305 ohne Seriennummer. Live prüfen, ggf. angleichen.
@@ -63,7 +75,7 @@ Quelle: ioBroker-Adapter https://github.com/Eistee82/ioBroker.hoymiles (MIT, Cop
 
 ## Offen
 
-- Live-Test (WR muss online sein): neue Variablen der DTU- und Inverter-Instanz prüfen; `HMSWIFI_RebootDTU` und `HMSWIFI_RebootInverter` nur nach Freigabe durch den Nutzer.
+- Live-Test (WR muss online sein): Warnliste mit echten Einträgen prüfen (Zeitformat, Zuordnung); `HMSWIFI_RebootDTU` und `HMSWIFI_RebootInverter` nur nach Freigabe durch den Nutzer.
 - Rückmeldung des Users aus dem Forum mit verschlüsselter DTU (Debug der IO-Instanz) abwarten.
 - Beobachtung: Timer-Abfrage (0xA311) und SetPowerLimit (0xA305) liefen parallel über zwei TCP-Verbindungen, die DTU hat beide korrekt beantwortet. `SendCommand` serialisiert Anfragen nicht; bei Problemen hier ansetzen.
 - Ungetestet mit echter verschlüsselter DTU: Werden die Kommandos 0xA305 (Leistungsbegrenzung, Start/Stop) verschlüsselt akzeptiert?

@@ -67,16 +67,21 @@ Die Statusvariablen werden automatisch angelegt. Das Löschen einzelner kann zu 
 | Frequenz         | float   | Frequenz Ausgangsseite                    |
 | Leistung         | float   | Abgegeben Leistung                        |
 | Strom            | float   | Strom Ausgangsseite                       |
-| Leistungsfaktor  | float   | Leistungsfaktor                           |
+| Leistungsfaktor  | float   | Leistungsfaktor cos φ (z.B. `0,950`)      |
 | Temperatur       | float   | Temperatur des Inverters                  |
 | Link             | bool    | Inverter mit DTU verbunden                |
 | Leistungslimit   | integer | Einstellbares Limit des Inverters         |
 | Blindleistung    | float   | Blindleistung Ausgangsseite (var)         |
-| Warnungen        | integer | Anzahl der Warnungen des Inverters        |
+| Warnungen gesamt | integer | Anzahl gespeicherter Warnungen (Zähler)   |
+| Aktive Warnungen | integer | Anzahl der aktuell aktiven Warnungen      |
+| Aktuelle Warnung | string  | Texte der aktiven Warnungen               |
+| Letzte Warnung   | string  | Text und Code der letzten Warnung         |
 | Software-Version | string  | Firmware des Inverters (z.B. `V01.00.08`) |
 | Hardware-Version | string  | Hardware des Inverters (z.B. `H00.04.00`) |
 
 Software- und Hardware-Version werden nach dem Start der IO-Instanz und danach alle 5 Minuten abgefragt.  
+Die Warnliste wird abgefragt, wenn sich die Anzahl der Warnungen ändert, und zusätzlich alle 5 Minuten.  
+Das Leistungslimit wird von der DTU nicht bei jedem Abruf geliefert, dann bleibt der letzte bekannte Wert erhalten.  
 
 ## 6. PHP-Befehlsreferenz
 
@@ -85,7 +90,7 @@ bool HMSWIFI_SetPowerLimit(integer $InstanzID, int $Limit);
 ```
 
 Setzen des Leistungslimit des Inverters.  
-Der neue Wert in `$Limit` ist in Prozent anzugeben.  
+Der neue Wert in `$Limit` ist in Prozent anzugeben (2 bis 100).  
 > [!CAUTION]
 > Bitte auf die Nutzung der Leistungsbegrenzung bei Nulleinspeisung verzichten, da es durch übermäßige Schreibvorgänge im EEPROM zu einer Beschädigung des Wechselrichters kommen kann.  
 
@@ -109,6 +114,20 @@ In der Instanz-Konfiguration steht dafür die Schaltfläche `Wechselrichter neu 
 
 ```php
 HMSWIFI_RebootInverter(12345);
+```
+
+---
+
+```php
+array HMSWIFI_GetWarnings(integer $InstanzID);
+```
+
+Liefert die zuletzt von der DTU gelesene Warnliste des Inverters.  
+Jeder Eintrag enthält `Code`, `Text`, `Number`, `StartTime`, `EndTime` (0 = noch aktiv), `Active`, `Data1` und `Data2`.  
+Die Klartexte der Warncodes stammen aus dem Projekt [ioBroker.hoymiles](https://github.com/Eistee82/ioBroker.hoymiles) (MIT-Lizenz).  
+
+```php
+print_r(HMSWIFI_GetWarnings(12345));
 ```
 
 ## 8. Changelog

@@ -104,7 +104,7 @@ namespace HoymilesWiFi\Inverter{
         public const Frequenz = 'freq'; // 0.01 Hz
         public const Power = 'p'; // 0.1 W
         public const Current = 'i'; // 0.01 A
-        public const PowerFactor = 'pf'; // 0.1 Pf
+        public const PowerFactor = 'pf'; // 0.001 cos phi
         public const Temp = 'temp'; // 0.1 °C
         public const Link = 'link'; // bool ?
         public const PowerLimit = 'pLim'; // 0.1 %
@@ -112,6 +112,10 @@ namespace HoymilesWiFi\Inverter{
         public const Warnings = 'wnum';
         public const SoftwareVersion = 'swVersion'; // aus AppInfo
         public const HardwareVersion = 'hwVersion'; // aus AppInfo
+        public const ActiveWarnings = 'wActive'; // aus WarnData
+        public const CurrentWarning = 'wText'; // aus WarnData
+        public const LastWarning = 'wLast'; // aus WarnData
+        public const WarningList = 'warns'; // aus WarnData, keine Variable
         public static $Vars = [
             self::Voltage     => [
                 'Voltage',
@@ -189,20 +193,19 @@ namespace HoymilesWiFi\Inverter{
                 'Power factor',
                 VARIABLETYPE_FLOAT,
                 [
-                    'MIN'              => 0,
-                    'DIGITS'           => 1,
-                    'MULTILINE'        => false,
+                    'MIN'              => -1,
+                    'DIGITS'           => 3,
                     'ICON'             => 'Gauge',
-                    'MAX'              => 100,
+                    'MAX'              => 1,
                     'PRESENTATION'     => VARIABLE_PRESENTATION_VALUE_PRESENTATION,
                     'INTERVALS'        => '[]',
                     'INTERVALS_ACTIVE' => false,
-                    'PERCENTAGE'       => true,
+                    'PERCENTAGE'       => false,
                     'PREFIX'           => '',
-                    'SUFFIX'           => ' %',
+                    'SUFFIX'           => '',
                     'USAGE_TYPE'       => 0
                 ],
-                0.1
+                0.001
             ],
             self::Temp        => [
                 'Temperature',
@@ -217,12 +220,7 @@ namespace HoymilesWiFi\Inverter{
                 'Link',
                 VARIABLETYPE_BOOLEAN,
                 [
-                    'MIN'              => 0,
-                    'DIGITS'           => 0,
-                    'MULTILINE'        => false,
                     'ICON'             => 'Warning',
-                    'INTERVALS_ACTIVE' => true,
-                    'MAX'              => 1,
                     'PRESENTATION'     => VARIABLE_PRESENTATION_VALUE_PRESENTATION,
                     'PERCENTAGE'       => false,
                     'OPTIONS'          => '[{"Value":false,"Caption":"Alarm","IconActive":false,"IconValue":"","ColorActive":true,"ColorValue":16711680},{"Value":true,"Caption":"OK","IconActive":false,"IconValue":"","ColorActive":true,"ColorValue":-1}]',
@@ -275,7 +273,7 @@ namespace HoymilesWiFi\Inverter{
                 0.1
             ],
             self::Warnings => [
-                'Warnings',
+                'Warnings total',
                 VARIABLETYPE_INTEGER,
                 [
                     'ICON'                => 'Warning',
@@ -311,11 +309,52 @@ namespace HoymilesWiFi\Inverter{
                     'ICON'         => 'Information'
                 ]
             ],
+            self::ActiveWarnings => [
+                'Active warnings',
+                VARIABLETYPE_INTEGER,
+                [
+                    'ICON'                => 'Warning',
+                    'DECIMAL_SEPARATOR'   => 'Client',
+                    'COLOR'               => -1,
+                    'MIN'                 => 0,
+                    'DIGITS'              => 0,
+                    'MAX'                 => 0,
+                    'PRESENTATION'        => VARIABLE_PRESENTATION_VALUE_PRESENTATION,
+                    'INTERVALS'           => '[]',
+                    'INTERVALS_ACTIVE'    => false,
+                    'PERCENTAGE'          => false,
+                    'PREFIX'              => '',
+                    'SUFFIX'              => '',
+                    'THOUSANDS_SEPARATOR' => '',
+                    'USAGE_TYPE'          => 0
+                ],
+                1
+            ],
+            self::CurrentWarning => [
+                'Current warning',
+                VARIABLETYPE_STRING,
+                [
+                    'PRESENTATION' => VARIABLE_PRESENTATION_VALUE_PRESENTATION,
+                    'ICON'         => 'Warning'
+                ]
+            ],
+            self::LastWarning => [
+                'Last warning',
+                VARIABLETYPE_STRING,
+                [
+                    'PRESENTATION' => VARIABLE_PRESENTATION_VALUE_PRESENTATION,
+                    'ICON'         => 'Warning'
+                ]
+            ],
         ];
     }
 
     class SetPowerLimit
     {
+        // Gültiger Bereich in % (POWER_LIMIT_MIN / POWER_LIMIT_MAX)
+        public const Min = 2;
+        public const Max = 100;
+
         public static $DataPrefix = [
             '',
             'A',
