@@ -37,19 +37,50 @@ Anlass: Forum https://community.symcon.de/t/modul-hoymiles-wifi-series/135536/74
 - Darstellung: `MaintainVariable` prüft die Parameter nur bei geänderter Darstellung. `MULTILINE` gibt es nur für String, für Boolean nur `OPTIONS` + allgemeine Parameter (`IPS_GetPresentation` der Wertanzeige). Beim Leistungsfaktor und Link bereinigt.
 - Button „Wechselrichter neu starten“ 300px breit.
 
+## Rückmeldung Forum (Beitrag 86-87, Version 1.25)
+
+- 07.10.2026 15:48-16:00: Einfrieren trat nach Entfernen von Action 50 erneut auf (nach DTU-Neustart je 1 Datensatz, dann stehend). DTU-Neustart (`HMSWIFI_RebootDTU`, ~12 s offline) half nicht, **WR-Neustart (`HMSWIFI_RebootInverter`) schon**: ab 16:00:03 wieder Daten ca. alle 17 s. Es hing also der WR bzw. seine Verbindung zur eingebauten DTU; Action 50 bleibt Hauptverdacht als Auslöser. WR-Neustart setzt `ed` (Tagesertrag) auf 0. Beide Reboot-Befehle (0x2305) werden lokal nie beantwortet -> Zeitüberschreitung gilt als Erfolg (`TimeoutExpected`, keine Meldung, IO-Status wechselt trotzdem). Nutzer prüft Firmware/Fehlerspeicher über das App-Toolkit.
+- Testsystem (Objekt 0 „Ruby & Yuri“) fragte bisher alle **10 s** ab, zusätzlich das Live-System („2DragonHouse“) mit altem Modul. Laut IO-README blockieren Intervalle unter 32 s die Cloud-Übertragung der DTU; als Mitursache für das Einfrieren möglich. 07.10.2026 ~16:12: Intervall auf 60 s gestellt, Live-System vom Nutzer deaktiviert. Weiter beobachten, ob das Einfrieren bei 60 s und nur einem Abfrager noch auftritt.
+- 07.10.2026 ~16:45: **Firmware-Update der eigenen DTU auf V01.01.01** (WLAN 2.1.21.10_hm, WR bleibt V01.00.08). `Dfs` 0x4E0000C0, Verschlüsselung automatisch erkannt, 0xA311/0xA304 verschlüsselt ok. `wnum` nach Update 0. Warnliste liefert jetzt Einträge (vorher bei V00.01.11 immer leer): Code **8408** = 0x2000 + 216 „Eingangsunterspannung bei PV1“ (in der App bestätigt, Port 1 getrennt), `Data2` 220 wie beim Tester. `WarnCodes::GetText` nutzt für unbekannte Codes 0x2000-0x3FFF den Text von Code - 0x2000.
+- Statusvariable `wnum` („Warnungen gesamt“) entfernt (Nutzer-Entscheidung): `wnum` ist die laufende Nummer des letzten Warn-Ereignisses (= `Number` des neuesten Eintrags), springt beliebig (6, 38, 72, 0 nach FW-Update, 3572) und ist für Nutzer nicht aussagekräftig. Nur noch intern im IO als Auslöser für Action 50. Für Nutzer bleibt „Aktive Warnungen“. Bestehende Variablen werden nicht gelöscht, nur nicht mehr aktualisiert (Changelog-Hinweis).
+- 07.10.2026 17:35: **Action 50 erneut getestet** (DTU V01.01.01, 60-s-Intervall, nur ein Abfrager): kein Einfrieren. Ohne Action 50 aktualisiert die DTU ihre Liste nicht (Warnung blieb 30 min nach Ende aktiv, App hatte sie schon gelöscht); direkt nach Action 50 abgeschlossen (`EndTime` gesetzt), Code dabei 8408 (0x20D8, aktiv) -> 28888 (0x70D8, beendet), `Number` = `wnum` (3572). `WarnCodes::GetText` maskiert unbekannte Codes mit 0x1FFF, dann 0x0FFF. Umsetzung: Action 50 nur bei Änderung von `wnum` oder alle 1800 s (`AlarmListInterval`), Liste im nächsten Zyklus abholen (`TriggerDelay` 5 s), sonst alle 300 s nur lesen. Beobachten, ob das Einfrieren wieder auftritt; falls ja, Action 50 per Property abschaltbar machen.
+- **Action 50 (`ALARM_LIST`) friert die DTU ein** (DTU V00.01.11 im HMS-2T): danach liefert 0xA311 nur noch den letzten Datensatz, nur vereinzelt frische Werte. Belegt über ein zweites System mit altem Modul an derselben DTU: 06.10. Action 50 per Testskript 17:43:06 -> eingefroren ab ~17:44 (bis Abend, ein Datensatz 18:28); 07.10. Action 50 direkt nach Wiederverbinden ~13:34 -> eingefroren ab 13:35. Reines Abholen per 0xA304 war unkritisch (17:42:49). Fix 1.25: Action 50 entfernt, `CheckWarnings` holt die Liste nur per 0xA304 (bei Änderung von `wnum` oder alle 300 s). Offen: ob die Liste ohne Anstoß gefüllt wird (Tester prüfen) und wie sich die DTU erholt (Neustart?).
+- power1625 (DTU V01.01.01, verschlüsselt): Warnliste funktioniert. 0xA304 liefert `warn_device` 1 und Einträge (Code 209 „PV1 ohne Eingang“, 216 „Eingangsunterspannung bei PV1“), identisch zur App. `s_time`/`e_time` sind Unix-Sekunden, `e_time` 0 = aktiv. Debug: `tests/debug_13995.log` (enthält Seriennummern, nicht einchecken).
+- Seine DTU liefert ca. alle 60 s neue Daten, `pLim` fehlt in jeder Antwort (Fix aus 1.24 greift).
+- `link` fehlt in einzelnen Antworten (07:59:34, übrige Werte normal, auch `crc` 0) -> Link flackerte OK/Alarm. Fix: Inverter zählt Antworten ohne `link` (Buffer `link`), Alarm erst ab `Variables::LinkMissingLimit` = 3 in Folge.
+
 ## Warnungen / Alarme des Wechselrichters (Version 1.24, live nur teilweise geprüft)
 
 Quelle: ioBroker-Adapter https://github.com/Eistee82/ioBroker.hoymiles (MIT, Copyright Eistee82). Klartexte in `libs/HoymilesWarnCodes.php` (223 Codes, en/de, generiert aus `alarmCodes.ts` + `alarmCodesData.ts`, Cloud-Wörterbuch hat Vorrang), Hinweis im Dateikopf.
 
 - Ablauf im IO (`CheckWarnings`): ändert sich `wnum` eines WR oder sind 300 s vergangen, wird Action 50 (`ALARM_LIST`, 0xA305) gesendet. Beim nächsten RealData (frühestens nach 5 s) wird die Liste per 0xA304 (`WarnResDTO`: ymd_hms 1, package_now 2, offset 4, time 5) abgeholt; Antwort 0xA204 `WarnReqDTO` (dtu_sn 1, time 2, package_nub 3, package_now 4, warn_device 5, warns 6: pv_sn 1, code 2, num 3, s_time 4, e_time 5, w_data1 6, w_data2 7). Folgeseiten bis `package_nub` (max. 20).
 - ioBroker hält die Verbindung offen und bekommt 0xA204 nach Action 50 als Push. Live geprüft (06.10.2026, DTU V00.01.11 im HMS-2T): die DTU schließt die Verbindung nach **jeder** Antwort (auch nach Heartbeat 0xA302), ein Push ist damit nicht möglich. Der direkte Pull per 0xA304 (wie S-Miles) liefert nur `dtu_sn`, `time`, `warn_device` 15 und keine Einträge, auch direkt nachdem `wnum` von 6 auf 7 gestiegen war und nach Action 50 bzw. Action 46 (`READ_MI_HU_WARN`). Die S-Miles App zeigte zur selben Zeit ebenfalls keine Alarme (weder DTU noch Inverter), die leere Liste ist also vermutlich korrekt; `wnum` zählt auch Ereignisse, die die App nicht als Alarm zeigt (Sprung 6 -> 7 um 18:25 beim Abregeln, evtl. Code 38). Offen: mit einem echten Alarm in der App prüfen, ob er lokal per 0xA304 kommt. Die Implementierung bleibt drin; das Debug der IO (`WarnData`, `Warning`) zeigt bei anderen DTUs (z.B. power1625, V01.01.01), ob dort Einträge kommen. Heartbeat-Antwort 0xA202: offset 1, time 2, csq 3 (-27), dtu_sn 4, Feld 6 unbekannt.
-- Action 50 und 0xA304 laufen mit `SendCommand(..., $Quiet = true)`: Fehler nur im Debug (`ERROR (quiet)`), kein `trigger_error`, kein Statuswechsel. Grund: ungetestet, ob verschlüsselte DTUs diese Kommandos beantworten.
+- 0xA304 läuft mit `SendCommand(..., $Quiet = true)`: Fehler nur im Debug (`ERROR (quiet)`), kein `trigger_error`, kein Statuswechsel. Grund: ungetestet, ob verschlüsselte DTUs diese Kommandos beantworten.
 - Verteilung an die Inverter über `pv_sn` -> `InverterSerials`. Inverter: Variablen `wActive` (aktive = `e_time` 0), `wText` (Texte der aktiven), `wLast` (neueste nach `s_time`), Liste im Buffer, `HMSWIFI_GetWarnings()`.
 - Unklar: Format von `s_time`/`e_time` (ioBroker nimmt Unix-Sekunden an), Bedeutung `warn_device`. Mit echten Einträgen prüfen.
 - `wnum` ist kein Code, sondern ein Zähler (laut ioBroker die Anzahl der Warnungen im WR). User sieht 38, wir 6.
 - Offen im Backlog: Warnungen löschen (Action 42 `CLEAN_WARN`), Erdschluss löschen (Action 10), Sperren/Entsperren (Action 12/13), Wirk-/Blindleistungs-Limit (Action 47/48). BLE-only Geräte (2WB) lehnen Action 50 ab, nicht relevant.
 
 ## Backlog
+
+### Dokumentation: Firmware-Update der DTU (in Haupt-README übernommen, Abschnitt „Firmware der DTU“)
+
+Vom Nutzer am 07.10.2026 beschrieben (App „S-Miles Installer“):
+
+1. App S-Miles Installer öffnen.
+2. Anlage öffnen, sofern die App nicht direkt zur Anlage springt.
+3. Unten rechts über das letzte Icon die weiteren Funktionen öffnen und „Geräteliste“ wählen.
+4. Kategorie „DTU“ auswählen und die Kachel der DTU antippen.
+5. In der Liste der Eigenschaften unter „Gerätewartung“ die „Firmware-Aktualisierung“ wählen.
+6. Mit „Aktualisieren“ abschließen.
+
+Hinweise für die Doku: Ab DTU V01.01.01 kommuniziert die DTU verschlüsselt, Modulversionen vor 1.23 melden dann „Data has wrong length.“. Ein Downgrade ist über die App nicht möglich. Während des Updates ist die DTU offline, das IO geht in den Fehlerzustand und erholt sich über den Watchdog.
+
+### Kompatibilität Symcon 8.1 (geprüft 07.10.2026, nur Doku, kein 8.1-Testsystem)
+
+- `IPSModuleStrict` ab 8.1, Darstellungen in `MaintainVariable` ab 8.0 (SDK-Doku).  
+- Alle genutzten Darstellungen, Vorlagen (`VARIABLE_TEMPLATE_*`) und Parameter (`COLOR`, `DECIMAL_SEPARATOR`, `THOUSANDS_SEPARATOR`, `USAGE_TYPE`, Slider) waren schon in 1.2/1.22 enthalten, die mit Kompatibilität 8.1 veröffentlicht wurden. Neu in 9.0 sind u.a. `CONTENT_COLOR` und `DISPLAY_TYPE` der Wertanzeige; die setzt das Modul nicht.  
+- PHP: Symcon 8.0/8.1 bringt PHP 8.3, 9.0 PHP 8.5 (Migrationsseiten). Protobuf-Runtime 5.36.2 braucht PHP >= 8.2. Ergebnis: `compatibility` bleibt 8.1.
 
 ### Kleinere Punkte
 

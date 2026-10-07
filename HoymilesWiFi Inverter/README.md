@@ -72,7 +72,6 @@ Die Statusvariablen werden automatisch angelegt. Das Löschen einzelner kann zu 
 | Link             | bool    | Inverter mit DTU verbunden                |
 | Leistungslimit   | integer | Einstellbares Limit des Inverters         |
 | Blindleistung    | float   | Blindleistung Ausgangsseite (var)         |
-| Warnungen gesamt | integer | Anzahl gespeicherter Warnungen (Zähler)   |
 | Aktive Warnungen | integer | Anzahl der aktuell aktiven Warnungen      |
 | Aktuelle Warnung | string  | Texte der aktiven Warnungen               |
 | Letzte Warnung   | string  | Text und Code der letzten Warnung         |
@@ -80,7 +79,7 @@ Die Statusvariablen werden automatisch angelegt. Das Löschen einzelner kann zu 
 | Hardware-Version | string  | Hardware des Inverters (z.B. `H00.04.00`) |
 
 Software- und Hardware-Version werden nach dem Start der IO-Instanz und danach alle 5 Minuten abgefragt.  
-Die Warnliste wird abgefragt, wenn sich die Anzahl der Warnungen ändert, und zusätzlich alle 5 Minuten.  
+Die DTU aktualisiert ihre Warnliste bei neuen Warn-Ereignissen, sonst höchstens alle 30 Minuten. Eine in der App bereits beendete Warnung kann daher hier bis zu 30 Minuten länger als aktiv angezeigt werden. Die Liste wird erst ab DTU-Firmware V01.01.01 geliefert (siehe [Firmware der DTU](../README.md#firmware-der-dtu)).  
 Das Leistungslimit wird von der DTU nicht bei jedem Abruf geliefert, dann bleibt der letzte bekannte Wert erhalten.  
 
 ## 6. PHP-Befehlsreferenz
@@ -109,7 +108,8 @@ bool HMSWIFI_RebootInverter(integer $InstanzID);
 ```
 
 Startet den Inverter neu.  
-Liefert `true`, wenn die DTU den Befehl bestätigt hat. Die IO-Instanz muss dafür nach ihrem Start mindestens einmal erfolgreich Daten abgerufen haben, damit die Seriennummer des Inverters bekannt ist.  
+Liefert `true`, wenn der Befehl gesendet wurde. Die DTU bestätigt den Befehl nicht immer, das IO geht dann kurz in einen Fehlerzustand, bis wieder Daten kommen. Die IO-Instanz muss nach ihrem Start mindestens einmal erfolgreich Daten abgerufen haben, damit die Seriennummer des Inverters bekannt ist.  
+Nach dem Neustart beginnt der Tagesertrag wieder bei 0.  
 In der Instanz-Konfiguration steht dafür die Schaltfläche `Wechselrichter neu starten` zur Verfügung.  
 
 ```php

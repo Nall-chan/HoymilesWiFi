@@ -252,10 +252,18 @@ namespace Hoymiles\DTU{
          */
         public static function GetText(int $Code, bool $German): string
         {
-            if (!isset(self::Texts[$Code])) {
-                return ($German ? 'Unbekannter Code ' : 'Unknown code ') . $Code;
+            if (isset(self::Texts[$Code])) {
+                return self::Texts[$Code][$German ? 1 : 0];
             }
-            return self::Texts[$Code][$German ? 1 : 0];
+            // Manche Firmware setzt Status-Bits oberhalb des eigentlichen Codes,
+            // z.B. 8408 = 0x20D8 (aktiv) und 28888 = 0x70D8 (beendet), jeweils 216 „Eingangsunterspannung bei PV1“ (in der App bestätigt)
+            foreach ([0x1FFF, 0x0FFF] as $Mask) {
+                $BaseCode = $Code & $Mask;
+                if (($BaseCode !== $Code) && isset(self::Texts[$BaseCode])) {
+                    return self::Texts[$BaseCode][$German ? 1 : 0];
+                }
+            }
+            return ($German ? 'Unbekannter Code ' : 'Unknown code ') . $Code;
         }
     }
 }

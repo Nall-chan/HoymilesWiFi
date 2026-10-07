@@ -65,8 +65,9 @@ eval('declare(strict_types=1);namespace HoymilesIO {?>' . file_get_contents(dirn
  * @property int $LastAppInfo
  * @property array $InverterSerials
  * @property array $WarnNumbers
- * @property int $WarnTrigger
  * @property int $LastWarnData
+ * @property int $WarnTrigger
+ * @property int $LastAlarmList
  * @property int $NbrOfInverter
  * @property int $NbrOfSolarPort
  * @property int $DayVariableId
@@ -84,6 +85,11 @@ class HoymilesWiFiIO extends IPSModuleStrict
     use \HoymilesIO\Semaphore;
     use \HoymilesIO\BufferHelper;
 
+    // true wenn der letzte SendCommand ohne Antwort der DTU endete (nur innerhalb eines Aufrufs gültig)
+    private bool $ResponseTimeout = false;
+    // true wenn eine fehlende Antwort erwartet wird (Neustart der DTU), dann keine Fehlermeldung, aber Statuswechsel
+    private bool $TimeoutExpected = false;
+
     /**
      * Create
      *
@@ -98,8 +104,9 @@ class HoymilesWiFiIO extends IPSModuleStrict
         $this->LastAppInfo = 0;
         $this->InverterSerials = [];
         $this->WarnNumbers = [];
-        $this->WarnTrigger = 0;
         $this->LastWarnData = 0;
+        $this->WarnTrigger = 0;
+        $this->LastAlarmList = 0;
         $this->NbrOfInverter = 0;
         $this->NbrOfSolarPort = 0;
         $this->DayVariableId = 1;
@@ -159,8 +166,9 @@ class HoymilesWiFiIO extends IPSModuleStrict
         $this->LastAppInfo = 0;
         $this->InverterSerials = [];
         $this->WarnNumbers = [];
-        $this->WarnTrigger = 0;
         $this->LastWarnData = 0;
+        $this->WarnTrigger = 0;
+        $this->LastAlarmList = 0;
         $this->DayVariableIsTimeStamp = false;
         $this->NightVariableIsTimeStamp = false;
         $this->DayVariableId = 1;
@@ -425,7 +433,18 @@ class HoymilesWiFiIO extends IPSModuleStrict
                 $Request->setTid(time());
                 $Request->setPackageNub(1);
                 $Request->setAction(\HoymilesWiFi\Inverter\Actions::DTU_REBOOT);
-                return serialize($this->SendCloudCommand($Request, 'RebootDTU'));
+                $this->TimeoutExpected = true;
+                $Result = $this->SendCloudCommand($Request, 'RebootDTU');
+                $this->TimeoutExpected = false;
+                if ($Result) {
+                    return serialize(true);
+                }
+                // Die DTU bestätigt den Befehl lokal nicht und startet sofort neu
+                if ($this->ResponseTimeout) {
+                    $this->SendDebug('RebootDTU', 'No response, DTU is rebooting', 0);
+                    return serialize(true);
+                }
+                return serialize(false);
             case 'RebootInverter':
                 $InverterSerials = $this->InverterSerials ?: [];
                 $Number = (int) $Data['Data'];
@@ -439,7 +458,18 @@ class HoymilesWiFiIO extends IPSModuleStrict
                 $Request->setDevKind(\HoymilesWiFi\Inverter\DeviceKind::DTU);
                 $Request->setAction(\HoymilesWiFi\Inverter\Actions::INV_REBOOT);
                 $Request->setMiToSn([(int) $InverterSerials[$Number]]);
-                return serialize($this->SendCloudCommand($Request, 'RebootInverter'));
+                $this->TimeoutExpected = true;
+                $Result = $this->SendCloudCommand($Request, 'RebootInverter');
+                $this->TimeoutExpected = false;
+                if ($Result) {
+                    return serialize(true);
+                }
+                // Die DTU bestätigt den Befehl lokal nicht
+                if ($this->ResponseTimeout) {
+                    $this->SendDebug('RebootInverter', 'No response, inverter is rebooting', 0);
+                    return serialize(true);
+                }
+                return serialize(false);
         }
         return '';
     }
@@ -853,8 +883,10 @@ class HoymilesWiFiIO extends IPSModuleStrict
     }
 
     /**
-     * Stößt bei geänderter Anzahl Warnungen (oder zyklisch) die Abfrage der Warnliste an
-     * und holt die Liste beim nächsten Abruf ab.
+     * Pflegt die Warnliste.
+     * Die DTU aktualisiert ihre Liste nur nach Action 50 (ALARM_LIST). Die wird daher nur bei geänderter
+     * Anzahl Warnungen und sonst höchstens alle AlarmListInterval Sekunden gesendet, die Liste beim nächsten Abruf abgeholt.
+     * Dazwischen wird die Liste alle Interval Sekunden nur gelesen.
      *
      * @param array $WarnNumbers Nummer des Wechselrichters => wnum
      * @return void
@@ -862,23 +894,37 @@ class HoymilesWiFiIO extends IPSModuleStrict
     private function CheckWarnings(array $WarnNumbers): void
     {
         $Now = time();
+        // Nach Action 50 die aktualisierte Liste abholen
         if ($this->WarnTrigger > 0) {
             if (($Now - $this->WarnTrigger) < \Hoymiles\DTU\WarnData::TriggerDelay) {
                 return;
             }
             $this->WarnTrigger = 0;
-            $Warnings = $this->RequestWarnData();
-            if ($Warnings !== false) {
-                $this->ForwardWarnings($Warnings);
+            $this->FetchWarnings($Now);
+            return;
+        }
+        if (($WarnNumbers != $this->WarnNumbers) || (($Now - $this->LastAlarmList) >= \Hoymiles\DTU\WarnData::AlarmListInterval)) {
+            // Auch bei Fehlern erst nach Interval oder neuer Warnung erneut versuchen
+            $this->WarnNumbers = $WarnNumbers;
+            $this->LastAlarmList = $Now;
+            if ($this->SendAlarmList($Now)) {
+                $this->WarnTrigger = $Now;
             }
             return;
         }
-        if (($WarnNumbers == $this->WarnNumbers) && (($Now - $this->LastWarnData) < \Hoymiles\DTU\WarnData::Interval)) {
-            return;
+        if (($Now - $this->LastWarnData) >= \Hoymiles\DTU\WarnData::Interval) {
+            $this->FetchWarnings($Now);
         }
-        // Auch bei Fehlern erst nach Interval oder neuer Warnung erneut versuchen
-        $this->WarnNumbers = $WarnNumbers;
-        $this->LastWarnData = $Now;
+    }
+
+    /**
+     * Fordert die DTU per Action 50 (ALARM_LIST) auf, ihre Warnliste zu aktualisieren.
+     *
+     * @param int $Now
+     * @return bool true wenn die DTU den Befehl bestätigt hat
+     */
+    private function SendAlarmList(int $Now): bool
+    {
         $Request = new \Hoymiles\CommandResDTO();
         $Request->setTime($Now);
         $Request->setTid($Now);
@@ -886,12 +932,27 @@ class HoymilesWiFiIO extends IPSModuleStrict
         $Request->setAction(\HoymilesWiFi\Inverter\Actions::ALARM_LIST);
         $ResultStream = $this->SendCommand(\Hoymiles\DTU\Commands::CommandResDTO, $Request->serializeToString(), true, true);
         if ($ResultStream === false) {
-            return;
+            return false;
         }
         $Result = new \Hoymiles\CommandReqDTO();
         $Result->mergeFromString($ResultStream);
         $this->SendDebug('AlarmList Result', $Result->serializeToJsonString(\Google\Protobuf\PrintOptions::EMIT_DEFAULTS), 0);
-        $this->WarnTrigger = $Now;
+        return true;
+    }
+
+    /**
+     * Liest die Warnliste und verteilt sie an die Inverter-Instanzen.
+     *
+     * @param int $Now
+     * @return void
+     */
+    private function FetchWarnings(int $Now): void
+    {
+        $this->LastWarnData = $Now;
+        $Warnings = $this->RequestWarnData();
+        if ($Warnings !== false) {
+            $this->ForwardWarnings($Warnings);
+        }
     }
 
     /**
@@ -1098,6 +1159,7 @@ class HoymilesWiFiIO extends IPSModuleStrict
 
     private function SendCommand(int $Command, string $RequestBytes, bool $AllowRetry = true, bool $Quiet = false): false|string
     {
+        $this->ResponseTimeout = false;
         $TriggerError = !$this->ReadPropertyBoolean(\HoymilesWiFi\IO\Property::SuppressConnectionError);
         $EncryptCommand = \Hoymiles\DTU\Encryption::IsEncryptedCommand($Command);
         if ($EncryptCommand && !$this->EncryptionChecked) {
@@ -1153,7 +1215,8 @@ class HoymilesWiFiIO extends IPSModuleStrict
         }
         if (!$Data) {
             $this->SendDebug('ERROR (0)', 'Timeout', 0);
-            $this->ConnectionError($this->Translate('Timeout'), $TriggerError, $Quiet);
+            $this->ResponseTimeout = true;
+            $this->ConnectionError($this->Translate('Timeout'), $TriggerError && !$this->TimeoutExpected, $Quiet);
             return false;
         }
         if (strlen($Data) < 10) {

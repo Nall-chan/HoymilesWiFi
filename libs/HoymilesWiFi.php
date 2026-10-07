@@ -107,9 +107,11 @@ namespace HoymilesWiFi\Inverter{
         public const PowerFactor = 'pf'; // 0.001 cos phi
         public const Temp = 'temp'; // 0.1 °C
         public const Link = 'link'; // bool ?
+        // Anzahl Abfragen in Folge ohne link, bevor Link auf Alarm geht
+        public const LinkMissingLimit = 3;
         public const PowerLimit = 'pLim'; // 0.1 %
         public const ReactivePower = 'q'; // 0.1 var
-        public const Warnings = 'wnum';
+        // wnum (laufende Nummer des letzten Warn-Ereignisses) wird nur im IO als Auslöser für Action 50 genutzt
         public const SoftwareVersion = 'swVersion'; // aus AppInfo
         public const HardwareVersion = 'hwVersion'; // aus AppInfo
         public const ActiveWarnings = 'wActive'; // aus WarnData
@@ -271,27 +273,6 @@ namespace HoymilesWiFi\Inverter{
                     'USAGE_TYPE'          => 0
                 ],
                 0.1
-            ],
-            self::Warnings => [
-                'Warnings total',
-                VARIABLETYPE_INTEGER,
-                [
-                    'ICON'                => 'Warning',
-                    'DECIMAL_SEPARATOR'   => 'Client',
-                    'COLOR'               => -1,
-                    'MIN'                 => 0,
-                    'DIGITS'              => 0,
-                    'MAX'                 => 0,
-                    'PRESENTATION'        => VARIABLE_PRESENTATION_VALUE_PRESENTATION,
-                    'INTERVALS'           => '[]',
-                    'INTERVALS_ACTIVE'    => false,
-                    'PERCENTAGE'          => false,
-                    'PREFIX'              => '',
-                    'SUFFIX'              => '',
-                    'THOUSANDS_SEPARATOR' => '',
-                    'USAGE_TYPE'          => 0
-                ],
-                1
             ],
             self::SoftwareVersion => [
                 'Software version',

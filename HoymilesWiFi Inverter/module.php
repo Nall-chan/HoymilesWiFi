@@ -5,8 +5,12 @@ declare(strict_types=1);
 require_once dirname(__DIR__) . '/libs/HoymilesWiFi.php';
 require_once dirname(__DIR__) . '/libs/HoymilesWarnCodes.php';
 eval('declare(strict_types=1);namespace HoymilesWiFiInverter {?>' . file_get_contents(dirname(__DIR__) . '/libs/helper/VariableHelper.php') . '}');
+eval('declare(strict_types=1);namespace HoymilesWiFiInverter {?>' . file_get_contents(dirname(__DIR__) . '/libs/helper/BufferHelper.php') . '}');
 
 /**
+ * @property array $WarningList
+ * @property int $LinkMissing
+ *
  * @method void SetValueBoolean(string $Ident, bool $value)
  * @method void SetValueInteger(string $Ident, int $value)
  * @method void SetValueFloat(string $Ident, float $value)
@@ -16,16 +20,21 @@ eval('declare(strict_types=1);namespace HoymilesWiFiInverter {?>' . file_get_con
 class HoymilesWiFiInverter extends IPSModuleStrict
 {
     use \HoymilesWiFiInverter\VariableHelper;
+    use \HoymilesWiFiInverter\BufferHelper;
 
     public function Create(): void
     {
         //Never delete this line!
         parent::Create();
+        $this->WarningList = [];
+        $this->LinkMissing = 0;
         $this->RegisterPropertyInteger(\HoymilesWiFi\Inverter\Property::Number, 1);
     }
 
     public function ApplyChanges(): void
     {
+        $this->WarningList = [];
+        $this->LinkMissing = 0;
         $Address = $this->ReadPropertyInteger(\HoymilesWiFi\Inverter\Property::Number);
         $this->SetSummary('Number: ' . (string) $Address);
 
@@ -79,6 +88,10 @@ class HoymilesWiFiInverter extends IPSModuleStrict
             'Function' => 'SetPowerLimit',
             'Data'     => $Data
         ]));
+        // Bei einem Fehler im IO liefert SendDataToParent false
+        if (!is_string($ret) || ($ret === '')) {
+            return false;
+        }
         $Result = unserialize($ret);
         if ($Result) {
             $this->SetValueInteger(\HoymilesWiFi\Inverter\Variables::PowerLimit, $Limit);
@@ -100,6 +113,10 @@ class HoymilesWiFiInverter extends IPSModuleStrict
             'Function' => $Active ? 'StartInverter' : 'StopInverter',
             'Data'     => ''
         ]));
+        // Bei einem Fehler im IO liefert SendDataToParent false
+        if (!is_string($ret) || ($ret === '')) {
+            return false;
+        }
         return unserialize($ret);
     }
 
@@ -123,7 +140,8 @@ class HoymilesWiFiInverter extends IPSModuleStrict
             'Function' => 'RebootInverter',
             'Data'     => $Number
         ]));
-        if ($ret === '') {
+        // Bei einem Fehler im IO liefert SendDataToParent false
+        if (!is_string($ret) || ($ret === '')) {
             return false;
         }
         return unserialize($ret);
@@ -136,8 +154,7 @@ class HoymilesWiFiInverter extends IPSModuleStrict
      */
     public function GetWarnings(): array
     {
-        $Warnings = json_decode($this->GetBuffer(\HoymilesWiFi\Inverter\Variables::WarningList), true);
-        return is_array($Warnings) ? $Warnings : [];
+        return $this->WarningList;
     }
 
     /**
@@ -162,7 +179,7 @@ class HoymilesWiFiInverter extends IPSModuleStrict
             }
         }
         unset($Warning);
-        $this->SetBuffer(\HoymilesWiFi\Inverter\Variables::WarningList, json_encode($Warnings));
+        $this->WarningList = $Warnings;
         $Values = [
             \HoymilesWiFi\Inverter\Variables::ActiveWarnings => count(array_filter($Warnings, function ($Warning)
             {
@@ -196,6 +213,19 @@ class HoymilesWiFiInverter extends IPSModuleStrict
             // Ein echtes Limit ist mindestens 2 % (SetPowerLimit::Min).
             if (($Key == \HoymilesWiFi\Inverter\Variables::PowerLimit) && ($Value == 0)) {
                 continue;
+            }
+            // Auch link fehlt bei manchen DTUs in einzelnen Antworten, erst nach mehreren Abfragen in Folge als Alarm werten.
+            if ($Key == \HoymilesWiFi\Inverter\Variables::Link) {
+                if ($Value == 0) {
+                    $Missing = $this->LinkMissing + 1;
+                    $this->LinkMissing = $Missing;
+                    if ($Missing < \HoymilesWiFi\Inverter\Variables::LinkMissingLimit) {
+                        $this->SendDebug('Link', 'missing ' . $Missing . '/' . \HoymilesWiFi\Inverter\Variables::LinkMissingLimit, 0);
+                        continue;
+                    }
+                } else {
+                    $this->LinkMissing = 0;
+                }
             }
 
             switch ($Var[1]) {

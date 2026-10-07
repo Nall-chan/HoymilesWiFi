@@ -50,7 +50,8 @@ class HoymilesWiFiDTU extends IPSModuleStrict
             'Function' => 'RebootDTU',
             'Data'     => ''
         ]));
-        if ($ret === '') {
+        // Bei einem Fehler im IO liefert SendDataToParent false
+        if (!is_string($ret) || ($ret === '')) {
             return false;
         }
         return unserialize($ret);

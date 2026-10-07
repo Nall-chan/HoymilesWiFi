@@ -417,15 +417,17 @@ namespace Hoymiles\DTU{
      * Warnliste der Wechselrichter (Kommando 0xA304 WarnResDTO / Antwort 0xA204 WarnReqDTO).
      *
      * Die DTU liefert die Liste seitenweise, package_now ist 0-basiert, package_nub die Anzahl der Seiten.
-     * Mit Action 50 (ALARM_LIST) wird die DTU vorher angestoßen, die Warnungen beim Wechselrichter abzufragen.
+     * Die DTU aktualisiert die Liste nur nach Action 50 (ALARM_LIST). Action 50 sparsam senden, siehe STATUS.md (Verdacht auf Einfrieren der Echtzeitdaten).
      * Feldnummern nach ioBroker.hoymiles (src/lib/proto/WarnData.proto, MIT, Copyright Eistee82).
      */
     class WarnData
     {
         // Wartezeit in Sekunden zwischen Action 50 und Abholen der Liste
         public const TriggerDelay = 5;
-        // Spätestens nach dieser Zeit in Sekunden die Liste erneut abholen
+        // Spätestens nach dieser Zeit in Sekunden die Liste erneut lesen
         public const Interval = 300;
+        // Spätestens nach dieser Zeit in Sekunden Action 50 senden (sonst nur bei geänderter Anzahl Warnungen)
+        public const AlarmListInterval = 1800;
         // Schutz gegen Endlosschleifen bei fehlerhaften Seitenangaben
         public const MaxPackages = 20;
 

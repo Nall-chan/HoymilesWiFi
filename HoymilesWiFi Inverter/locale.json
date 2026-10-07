@@ -11,7 +11,6 @@
             "Link": "Link",
             "Power Limit": "Leistungslimit",
             "Reactive power": "Blindleistung",
-            "Warnings total": "Warnungen gesamt",
             "Power limit must be between %d and %d %%.": "Leistungslimit muss zwischen %d und %d %% liegen.",
             "Software version": "Software-Version",
             "Hardware version": "Hardware-Version",

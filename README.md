@@ -18,6 +18,7 @@ Integration der Hoymiles Wechselrichter mit integrierten WiFi
 
 - [1. Funktionsumfang](#1-funktionsumfang)
 - [2. Voraussetzungen](#2-voraussetzungen)
+  - [Firmware der DTU](#firmware-der-dtu)
 - [3. Software-Installation](#3-software-installation)
 - [4. Einrichten der Instanzen in IP-Symcon](#4-einrichten-der-instanzen-in-ip-symcon)
 - [5. Anhang](#5-anhang)
@@ -49,6 +50,29 @@ Folgende Module beinhaltet das Hoymiles WiFi Smart Rollos Repository:
 
 - Symcon ab Version 8.1  
 - Hoymiles Wechselrichter mit WiFi (integrierte DTU)
+- DTU-Firmware ab V01.01.01 empfohlen (siehe [Firmware der DTU](#firmware-der-dtu))
+
+### Firmware der DTU
+
+Getestet mit den DTU-Firmware-Versionen V00.01.11 und V01.01.01. Die installierte Version zeigt die Statusvariable `Software-Version` der [DTU-Instanz](HoymilesWiFi%20DTU/README.md).  
+
+- Ab V01.01.01 kommuniziert die DTU verschlüsselt. Diese Firmware wird erst ab Version 1.23 dieser Library unterstützt, ältere Versionen melden `Data has wrong length.`.  
+- Die Warnliste des Wechselrichters (Statusvariablen `Aktive Warnungen`, `Aktuelle Warnung` und `Letzte Warnung`) wird erst ab V01.01.01 geliefert, mit V00.01.11 bleibt sie leer.  
+
+Die Firmware wird über die App **S-Miles Installer** aktualisiert:  
+
+1. App S-Miles Installer öffnen.  
+2. Anlage öffnen, sofern die App nicht direkt zur Anlage springt.  
+3. Unten rechts über das letzte Icon die weiteren Funktionen öffnen und `Geräteliste` wählen.  
+4. Kategorie `DTU` auswählen und die Kachel der DTU antippen.  
+5. In der Liste der Eigenschaften unter `Gerätewartung` die `Firmware-Aktualisierung` wählen.  
+6. Mit `Aktualisieren` abschließen.  
+
+Während der Aktualisierung ist die DTU nicht erreichbar, die IO-Instanz meldet in dieser Zeit einen Fehler und verbindet sich danach selbstständig neu.  
+
+> [!WARNING]
+> Eine Rückkehr zu einer älteren Firmware ist über die App nicht möglich.
+
   
 ## 3. Software-Installation
 
@@ -74,6 +98,16 @@ Dadurch wird automatisch der benötigte [IO](HoymilesWiFi%20IO/README.md) erstel
 |  Hoymiles WiFi SolarPort   |    Device    | {65B18475-D1B7-825C-5958-5300C1100845} |
 
 ### 2. Changelog
+
+**Version 1.25:**  
+
+- Die Statusvariable Inverter `Warnungen gesamt` (ein interner Ereigniszähler des Wechselrichters) entfällt, die Anzahl der aktuellen Warnungen liefert `Aktive Warnungen`. Die bestehende Variable wird nicht mehr aktualisiert und kann gelöscht werden  
+- Fix: Nach der Abfrage der Warnungen lieferte die DTU teilweise keine aktuellen Werte mehr (Daten blieben stehen). Die DTU wird jetzt nur noch bei neuen Warn-Ereignissen und sonst höchstens alle 30 Minuten zur Aktualisierung der Warnliste aufgefordert, dazwischen wird die Liste alle 5 Minuten nur gelesen  
+- Dokumentation: Hinweise zur DTU-Firmware und Anleitung zur Aktualisierung  
+- Warncodes mit zusätzlichen Status-Bits (z.B. 8408 oder 28888) werden mit Klartext angezeigt  
+- Fix: `HMSWIFI_RebootDTU` und `HMSWIFI_RebootInverter` meldeten einen Fehler, obwohl der Neustart ausgeführt wurde (die DTU bestätigt den Befehl nicht)  
+- Fix: Fehler im IO führten bei `HMSWIFI_SetPowerLimit`, `HMSWIFI_SetInverterState`, `HMSWIFI_RebootDTU` und `HMSWIFI_RebootInverter` zu einem PHP-Fehler statt zur Rückgabe `false`  
+- Fix: Statusvariable `Link` wechselte kurz auf Alarm, wenn die DTU den Link-Status in einer Antwort nicht mitgeliefert hat. Alarm erst nach 3 Abfragen in Folge ohne Link-Status  
 
 **Version 1.24:**  
 

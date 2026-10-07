@@ -71,7 +71,7 @@ bool HMSWIFI_RebootDTU(integer $InstanzID);
 ```
 
 Startet die DTU neu.  
-Liefert `true`, wenn die DTU den Befehl bestätigt hat. Während des Neustarts ist die DTU kurzzeitig nicht erreichbar.  
+Liefert `true`, wenn der Befehl gesendet wurde. Die DTU bestätigt den Befehl nicht immer, sondern startet sofort neu. Während des Neustarts ist die DTU kurzzeitig nicht erreichbar und das IO geht in einen Fehlerzustand, bis wieder Daten kommen.  
 In der Instanz-Konfiguration steht dafür die Schaltfläche `DTU neu starten` zur Verfügung.  
 
 ```php

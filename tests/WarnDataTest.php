@@ -70,5 +70,11 @@ class WarnDataTest extends TestCase
         $this->assertSame('Übertemperaturschutz', WarnCodes::GetText(121, true));
         $this->assertSame('Over temperature protection', WarnCodes::GetText(121, false));
         $this->assertSame('Unbekannter Code 99999', WarnCodes::GetText(99999, true));
+        // Code mit Bit 0x2000 (DTU V01.01.01)
+        $this->assertSame('Eingangsunterspannung bei PV1', WarnCodes::GetText(8408, true));
+        // Code mit Bits 0x7000 (beendete Warnung)
+        $this->assertSame('Eingangsunterspannung bei PV1', WarnCodes::GetText(28888, true));
+        // Bekannte Codes im Bereich ab 0x2000 bleiben unverändert
+        $this->assertSame(WarnCodes::Texts[10216][1], WarnCodes::GetText(10216, true));
     }
 }
