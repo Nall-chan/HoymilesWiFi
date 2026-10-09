@@ -102,6 +102,11 @@ Hierfür gibt es folgende Möglichkeiten:
  ![Actions](imgs/actions.png) 
  1. Über PHP-Scripte kann die Instanz mit den Befehlen `HMSWIFI_SetInactive` und `HMSWIFI_SetActive` Inaktiv und Aktiv geschaltet werden.  
 
+**Geräteinformationen**:  
+
+Im aufklappbaren Bereich `Geräteinformationen` zeigt die Konfigurationsseite Seriennummern, Versionen sowie Modell und Nennleistung der Wechselrichter an. Die Werte werden nach dem Start der Instanz und danach alle 5 Minuten von der DTU gelesen und nicht gespeichert; direkt nach dem Start steht dort `Noch keine Geräteinformationen empfangen.`  
+Aktuell von der DTU abrufbar sind sie per [`HMSWIFI_GetDeviceInfo`](#6-php-befehlsreferenz).  
+
 ## 5. Statusvariablen
 
    Es werden keine Statusvariablen angelegt.  
@@ -129,6 +134,35 @@ bool HMSWIFI_SetInactive(integer $InstanzID);
 ```
 
 Schlafmodus starten, Abfrageintervall beenden.  
+
+---
+
+```php
+array|false HMSWIFI_GetDeviceInfo(integer $InstanzID);
+```
+
+Liest die Geräteinformationen neu von der DTU und liefert sie als Array aus Schlüssel und Wert.  
+Die Schlüssel beginnen mit `Dtu` bzw. `Inverter` und der Nummer des Wechselrichters (wie in der Wechselrichter-Instanz eingestellt).  
+Ist die Instanz nicht aktiv (z.B. im Schlafmodus) oder antwortet die DTU nicht, wird eine Fehlermeldung ausgegeben und `false` zurückgegeben.  
+
+| Schlüssel                    | Beispiel         | Beschreibung                                                   |
+| ---------------------------- | ---------------- | -------------------------------------------------------------- |
+| `DtuSerialNumber`            | `414300000000`   | Seriennummer der DTU                                           |
+| `DtuSoftwareVersion`         | `V01.01.01`      | Firmware der DTU                                               |
+| `DtuHardwareVersion`         | `H00.01.00`      | Hardware der DTU                                               |
+| `DtuWifiVersion`             | `2.1.21.10_hm`   | Firmware des WLAN-Moduls                                       |
+| `Inverter1SerialNumber`      | `22000000000000` | Seriennummer des Wechselrichters                               |
+| `Inverter1SoftwareVersion`   | `V01.00.08`      | Firmware des Wechselrichters                                   |
+| `Inverter1HardwareVersion`   | `H00.04.00`      | Hardware des Wechselrichters                                   |
+| `Inverter1PartNumber`        | `0x10214201`     | Hardware-Teilenummer                                           |
+| `Inverter1Model`             | `HMS-800W-2T`    | Aus der Teilenummer abgeleitetes Modell, leer wenn unbekannt   |
+| `Inverter1RatedPower`        | `800`            | Nennleistung in W, `0` wenn unbekannt                          |
+
+Modell und Nennleistung werden nach dem Schema der Modelltabelle von [OpenDTU](https://github.com/tbnobody/OpenDTU) abgeleitet. Geprüft ist das nur mit einem HMS-800W-2T; bei anderen Modellen bitte im Forum melden, falls die Angabe nicht stimmt.  
+
+```php
+print_r(HMSWIFI_GetDeviceInfo(12345));
+```
 
 ---
 

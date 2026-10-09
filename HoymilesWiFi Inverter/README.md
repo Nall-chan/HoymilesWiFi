@@ -27,7 +27,8 @@ Anzeigen und Steuern der Werte des Inverters
 ## 1. Funktionsumfang
 
 - Anzeigen der Werte des Inverters
-- Setzen des Leistungslimit
+- Setzen des Leistungslimit in Prozent (dauerhaft gespeichert)
+- Setzen eines Laufzeit-Leistungslimit in Watt (nur HMS-W-2T-Familie, wird bei einem Neustart des Wechselrichters zurückgesetzt)
 
 ## 2. Voraussetzungen
 
@@ -49,9 +50,15 @@ Es wird empfohlen diese Instanz über die dazugehörige Instanz des [Configurato
 
 **Konfigurationsseite**:  
 
-| Name   | Typ     | Standardwert | Beschreibung          |
-| ------ | ------- | :----------: | --------------------- |
-| Number | integer |      1       | Adresse des Inverters |
+| Eigenschaft                                                       | Name                 | Typ     | Standardwert | Beschreibung                                                                                     |
+| ----------------------------------------------------------------- | -------------------- | ------- | :----------: | ------------------------------------------------------------------------------------------------ |
+| Nummer                                                            | Number               | integer |      1       | Adresse des Inverters (1 bis 3)                                                                  |
+| Laufzeit-Leistungslimit in Watt (nur HMS-W-2T, Wert wird bei einem Neustart des Wechselrichters zurückgesetzt) | EnablePowerLimitWatt | bool    |    false     | Legt die Statusvariable `Leistungslimit (Watt)` an, siehe [`HMSWIFI_SetPowerLimitWatt`](#6-php-befehlsreferenz) |
+
+```php
+IPS_SetProperty(12345, 'EnablePowerLimitWatt', true);
+IPS_ApplyChanges(12345);
+```
 
 ![Config](imgs/config.png)  
 
@@ -70,7 +77,8 @@ Die Statusvariablen werden automatisch angelegt. Das Löschen einzelner kann zu 
 | Leistungsfaktor  | float   | Leistungsfaktor cos φ (z.B. `0,950`)      |
 | Temperatur       | float   | Temperatur des Inverters                  |
 | Link             | bool    | Inverter mit DTU verbunden                |
-| Leistungslimit   | integer | Einstellbares Limit des Inverters         |
+| Leistungslimit   | integer | Einstellbares Limit des Inverters in %    |
+| Leistungslimit (Watt) | float | Laufzeit-Limit in W (nur wenn in der Konfiguration aktiviert), Maximum des Schiebereglers ist die Nennleistung des Inverters (sonst 2000 W) |
 | Blindleistung    | float   | Blindleistung Ausgangsseite (var)         |
 | Aktive Warnungen | integer | Anzahl der aktuell aktiven Warnungen      |
 | Aktuelle Warnung | string  | Texte der aktiven Warnungen               |
@@ -80,7 +88,10 @@ Die Statusvariablen werden automatisch angelegt. Das Löschen einzelner kann zu 
 
 Software- und Hardware-Version werden nach dem Start der IO-Instanz und danach alle 5 Minuten abgefragt.  
 Die DTU aktualisiert ihre Warnliste bei neuen Warn-Ereignissen, sonst höchstens alle 30 Minuten. Eine in der App bereits beendete Warnung kann daher hier bis zu 30 Minuten länger als aktiv angezeigt werden. Die Liste wird erst ab DTU-Firmware V01.01.01 geliefert (siehe [Firmware der DTU](../README.md#firmware-der-dtu)).  
-Das Leistungslimit wird von der DTU nicht bei jedem Abruf geliefert, dann bleibt der letzte bekannte Wert erhalten.  
+Die DTU meldet das Leistungslimit erst, nachdem es seit dem letzten Start des Inverters einmal gesetzt wurde (aus Symcon oder aus der App). Bis dahin bleibt der letzte bekannte Wert erhalten.  
+Die DTU meldet immer nur das zuletzt gesetzte Limit, also entweder in % oder in Watt. Die Instanz merkt sich, welches zuletzt aus Symcon gesetzt wurde, und aktualisiert die passende Variable. Meldet die DTU einen anderen Wert, wurde das Limit außerhalb von Symcon geändert (z.B. in der App, die immer ein Limit in % setzt); der Wert wird dann als % übernommen.  
+Ein Limit in % und ein Neustart des Inverters heben ein Limit in Watt auf. `Leistungslimit (Watt)` zeigt dann die Nennleistung des Inverters an (keine Begrenzung in Watt; ist die Nennleistung unbekannt, 2000 W). Den Neustart erkennt die Instanz daran, dass der Tagesertrag wieder bei 0 beginnt.  
+Die beiden Einstellungen für das Leistungslimit in der Hoymiles-App (unter „System“ und in den Geräteeinstellungen) speichert die App getrennt. Am Inverter gilt nur ein Limit in %: der zuletzt gesendete Wert, egal aus welchem Feld.  
 
 ## 6. PHP-Befehlsreferenz
 
@@ -90,8 +101,34 @@ bool HMSWIFI_SetPowerLimit(integer $InstanzID, int $Limit);
 
 Setzen des Leistungslimit des Inverters.  
 Der neue Wert in `$Limit` ist in Prozent anzugeben (2 bis 100).  
+Das Limit wird dauerhaft gespeichert und gilt auch nach einem Neustart des Inverters. Ein aktives Limit in Watt (`HMSWIFI_SetPowerLimitWatt`) wird damit aufgehoben.  
+
 > [!CAUTION]
-> Bitte auf die Nutzung der Leistungsbegrenzung bei Nulleinspeisung verzichten, da es durch übermäßige Schreibvorgänge im EEPROM zu einer Beschädigung des Wechselrichters kommen kann.  
+> Jedes Setzen beschreibt den Flash-Speicher der DTU und den EEPROM des Wechselrichters. Diese Speicher vertragen nur eine begrenzte Anzahl Schreibvorgänge, zu häufiges Setzen kann DTU und Wechselrichter dauerhaft beschädigen.  
+> Das Limit daher nicht in kurzen Abständen ändern (z.B. für eine Nulleinspeisung). Dafür ist `HMSWIFI_SetPowerLimitWatt` gedacht.
+
+```php
+HMSWIFI_SetPowerLimit(12345, 80);
+```
+
+---
+
+```php
+bool HMSWIFI_SetPowerLimitWatt(integer $InstanzID, float $Watt);
+```
+
+Setzen eines Laufzeit-Leistungslimit in Watt (0.1 bis 3276.7).  
+Nur für Inverter der HMS-W-2T-Familie (mit integrierter DTU, z.B. HMS-800W-2T).  
+Das Limit liegt nur im Arbeitsspeicher von DTU und Inverter, es wird nichts in Flash oder EEPROM geschrieben. Daher eignet es sich für häufige Änderungen, z.B. eine Nulleinspeisung.  
+Beim Neustart des Inverters (spätestens jede Nacht) geht es verloren, danach gilt wieder das Limit in Prozent. Das Modul sendet es nicht erneut.  
+Liefert `true`, wenn die DTU den Befehl bestätigt hat.  
+Die Statusvariable `Leistungslimit (Watt)` wird nur angelegt, wenn sie in der [Konfiguration](#4-einrichten-der-instanzen-in-ip-symcon) aktiviert ist; die Funktion arbeitet auch ohne sie.  
+
+```php
+HMSWIFI_SetPowerLimitWatt(12345, 300);
+```
+
+Die Funktion und die Werte stammen aus dem Projekt [ioBroker.hoymiles](https://github.com/Eistee82/ioBroker.hoymiles) (MIT-Lizenz) und wurden mit einem HMS-W-2T (DTU-Firmware V01.01.01) geprüft: Ein Limit von 30 W senkte die Leistung von 93 W auf 27 W, `HMSWIFI_SetPowerLimit(12345, 100)` hob es wieder auf.  
 
 ---
 

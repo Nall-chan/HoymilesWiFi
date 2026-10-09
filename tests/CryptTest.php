@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 use Hoymiles\DTU\AppInfo;
 use Hoymiles\DTU\Encryption;
+use Hoymiles\DTU\PartNumber;
 use Hoymiles\DTU\Protobuf;
 use PHPUnit\Framework\TestCase;
 
@@ -64,5 +65,37 @@ class CryptTest extends TestCase
         $this->assertFalse(Encryption::IsEncryptedDtu(3));
         // abgeschnittene Daten
         $this->assertFalse(AppInfo::ParseResponse(substr($Data, 0, -3)));
+    }
+
+    public function testAppInfoPvInfo(): void
+    {
+        // Rohwerte live HMS-800W-2T (09.10.2026), Felder 3, 7, 8 unbekannt
+        $Pv = Protobuf::EncodeVarintField(2, 22000000000001)
+            . Protobuf::EncodeVarintField(3, 101)
+            . Protobuf::EncodeVarintField(4, 10008)
+            . Protobuf::EncodeVarintField(5, 0x10214201)
+            . Protobuf::EncodeVarintField(6, 256)
+            . Protobuf::EncodeVarintField(7, 768)
+            . Protobuf::EncodeVarintField(8, 8193);
+        $Info = AppInfo::ParseResponse(Protobuf::EncodeBytesField(11, $Pv));
+        $this->assertIsArray($Info);
+        $this->assertSame('22000000000001', $Info['PvInfo'][0]['SerialNumber']);
+        $this->assertSame('01.00.08', AppInfo::FormatInverterSwVersion($Info['PvInfo'][0]['SwVersion']));
+        $this->assertSame(0x10214201, $Info['PvInfo'][0]['PartNumber']);
+        $this->assertSame('0x10214201', PartNumber::Format($Info['PvInfo'][0]['PartNumber']));
+    }
+
+    public function testPartNumber(): void
+    {
+        // live belegt
+        $this->assertSame(['Model' => 'HMS-800W-2T', 'RatedPower' => 800], PartNumber::Decode(0x10214201));
+        // Schema aus OpenDTU (Funk-Modelle)
+        $this->assertSame(600, PartNumber::Decode(0x10211101)['RatedPower']);
+        $this->assertSame(350, PartNumber::Decode(0x10202101)['RatedPower']);
+        $this->assertSame('HMS-2000W-4T', PartNumber::Decode(0x10227101)['Model']);
+        // unbekannt
+        $this->assertNull(PartNumber::Decode(0));
+        $this->assertNull(PartNumber::Decode(0x10323101));
+        $this->assertNull(PartNumber::Decode(0x10216101));
     }
 }

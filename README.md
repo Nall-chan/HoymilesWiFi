@@ -70,6 +70,9 @@ Die Firmware wird über die App **S-Miles Installer** aktualisiert:
 
 Während der Aktualisierung ist die DTU nicht erreichbar, die IO-Instanz meldet in dieser Zeit einen Fehler und verbindet sich danach selbstständig neu.  
 
+> [!IMPORTANT]
+> Vor einer Firmware-Aktualisierung (DTU oder Wechselrichter) die IO-Instanz schließen (Haken `Öffnen` entfernen) und danach wieder öffnen. Solange Symcon die DTU abfragt, kann die Aktualisierung bei 0 % stehen bleiben. Der Schlafmodus (`HMSWIFI_SetInactive`) reicht nicht, wenn ein Watchdog eingestellt ist, da dieser die Instanz wieder aktiviert.
+
 > [!WARNING]
 > Eine Rückkehr zu einer älteren Firmware ist über die App nicht möglich.
 
@@ -98,6 +101,15 @@ Dadurch wird automatisch der benötigte [IO](HoymilesWiFi%20IO/README.md) erstel
 |  Hoymiles WiFi SolarPort   |    Device    | {65B18475-D1B7-825C-5958-5300C1100845} |
 
 ### 2. Changelog
+
+**Version 1.26:**  
+
+- Neu: Laufzeit-Leistungslimit in Watt für die HMS-W-2T-Familie (`HMSWIFI_SetPowerLimitWatt`, Statusvariable `Leistungslimit (Watt)` über die Instanz-Konfiguration). Wird bei einem Neustart des Wechselrichters zurückgesetzt, beschreibt keinen Flash-Speicher und eignet sich daher für häufige Änderungen, z.B. eine Nulleinspeisung  
+- Neu: IO zeigt Geräteinformationen (Seriennummern, Versionen, Modell und Nennleistung der Wechselrichter) in der Konfiguration an, abrufbar per `HMSWIFI_GetDeviceInfo`  
+- Erkennt die Instanz die Nennleistung des Inverters, wird sie als Maximum für `Leistungslimit (Watt)` genutzt  
+- Ein in der App geändertes Leistungslimit wird erkannt und in `Leistungslimit` (%) übernommen  
+- Dokumentation: Warnung, dass jedes Setzen des Leistungslimit in % den Flash-Speicher von DTU und Wechselrichter beschreibt  
+- Fix: Kamen zwei Anfragen gleichzeitig (z.B. zyklische Abfrage und `HMSWIFI_SetInverterState`), beantwortete die DTU nur eine davon; die andere meldete eine Zeitüberschreitung, obwohl der Befehl teilweise trotzdem ausgeführt wurde. Anfragen an die DTU werden jetzt nacheinander gesendet  
 
 **Version 1.25:**  
 

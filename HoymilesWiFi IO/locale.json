@@ -34,6 +34,7 @@
             "Error on connect": "Fehler beim Verbinden",
             "Error on write": "Fehler beim Senden",
             "Timeout": "Zeitüberschreitung",
+            "DTU is busy with another request.": "DTU ist mit einer anderen Anfrage beschäftigt.",
             "Data has wrong length.": "Daten haben falsche Länge.",
             "Invalid checksum.": "Ungültige Prüfsumme.",
             "DTU uses encryption, but no valid key was received.": "DTU nutzt Verschlüsselung, es wurde aber kein gültiger Schlüssel empfangen.",
@@ -42,7 +43,19 @@
             "Error on decrypt data.": "Fehler beim Entschlüsseln der Daten.",
             "Serial number of inverter is not known yet.": "Seriennummer des Wechselrichters ist noch nicht bekannt.",
             "DTU rejected the command. Error code: ": "DTU hat den Befehl abgelehnt. Fehlercode: ",
-            "This module is free for non-commercial use,\r\nDonations in support of the author are accepted here:": "Dieses Modul ist für die nicht kommerzielle Nutzung kostenlos,\r\nSchenkungen als Unterstützung für den Autor werden hier akzeptiert:"
+            "This module is free for non-commercial use,\r\nDonations in support of the author are accepted here:": "Dieses Modul ist für die nicht kommerzielle Nutzung kostenlos,\r\nSchenkungen als Unterstützung für den Autor werden hier akzeptiert:",
+            "Device information": "Geräteinformationen",
+            "No device information received yet.": "Noch keine Geräteinformationen empfangen.",
+            "Inverter": "Wechselrichter",
+            "Serial number": "Seriennummer",
+            "Software version": "Software-Version",
+            "Hardware version": "Hardware-Version",
+            "WiFi version": "WLAN-Version",
+            "Hardware part number": "Hardware-Teilenummer",
+            "Model": "Modell",
+            "Rated power": "Nennleistung",
+            "unknown": "unbekannt",
+            "Device information could not be read.": "Geräteinformationen konnten nicht gelesen werden."
         }
     }
 }

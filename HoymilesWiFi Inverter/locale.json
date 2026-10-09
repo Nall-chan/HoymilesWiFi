@@ -21,7 +21,10 @@
             "Really reboot the inverter?": "Wechselrichter wirklich neu starten?",
             "Instance has no active parent": "Instanz hat keinen aktiven Parent",
             "Invalid Ident": "Ungültiger Ident",
-            "This module is free for non-commercial use,\r\nDonations in support of the author are accepted here:": "Dieses Modul ist für die nicht kommerzielle Nutzung kostenlos,\r\nSchenkungen als Unterstützung für den Autor werden hier akzeptiert:"
+            "This module is free for non-commercial use,\r\nDonations in support of the author are accepted here:": "Dieses Modul ist für die nicht kommerzielle Nutzung kostenlos,\r\nSchenkungen als Unterstützung für den Autor werden hier akzeptiert:",
+            "Power Limit (Watt)": "Leistungslimit (Watt)",
+            "Power limit must be between %.1f and %.1f W.": "Leistungslimit muss zwischen %.1f und %.1f W liegen.",
+            "Runtime power limit in watts (HMS-W-2T only, value is reset when the inverter restarts)": "Laufzeit-Leistungslimit in Watt (nur HMS-W-2T, Wert wird bei einem Neustart des Wechselrichters zurückgesetzt)"
         }
     }
 }

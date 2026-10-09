@@ -360,6 +360,8 @@ namespace Hoymiles\DTU{
                 $PvInfo[] = [
                     'SerialNumber' => (string) Protobuf::IntValue($Pv, 2),
                     'SwVersion'    => Protobuf::IntValue($Pv, 4),
+                    // Hardware-Teilenummer, live HMS-800W-2T: 0x10214201
+                    'PartNumber'   => Protobuf::IntValue($Pv, 5),
                     'HwVersion'    => Protobuf::IntValue($Pv, 6)
                 ];
             }
@@ -410,6 +412,62 @@ namespace Hoymiles\DTU{
         public static function FormatInverterHwVersion(int $Version): string
         {
             return sprintf('%02d.%02d.%02d', intdiv($Version, 2048), intdiv($Version, 64) % 32, $Version % 64);
+        }
+    }
+
+    /**
+     * Modell und Nennleistung aus der Hardware-Teilenummer des Inverters (APPPvInfoMO Feld 5).
+     *
+     * Schema abgeleitet aus der Modelltabelle von OpenDTU (https://github.com/tbnobody/OpenDTU,
+     * lib/Hoymiles/src/parser/DevInfoParser.cpp, GPL-2.0): Byte 2 = Anzahl Eingänge,
+     * oberes Halbbyte von Byte 3 = Leistung je Eingang. OpenDTU kennt nur die Funk-Modelle,
+     * für die WLAN-Modelle (W) ist nur HMS-800W-2T = 0x10214201 live belegt.
+     */
+    class PartNumber
+    {
+        // Byte 2 => Anzahl Eingänge
+        private const Inputs = [
+            0x20 => 1,
+            0x21 => 2,
+            0x22 => 4
+        ];
+        // Oberes Halbbyte von Byte 3 => Leistung je Eingang in W
+        private const PowerPerInput = [
+            1 => 300,
+            2 => 350,
+            4 => 400,
+            5 => 450,
+            7 => 500
+        ];
+
+        /**
+         * @param int $PartNumber
+         * @return array|null ['Model' => 'HMS-800W-2T', 'RatedPower' => 800] oder null wenn unbekannt
+         */
+        public static function Decode(int $PartNumber): ?array
+        {
+            if ((($PartNumber >> 24) & 0xFF) != 0x10) {
+                return null;
+            }
+            $Inputs = self::Inputs[($PartNumber >> 16) & 0xFF] ?? null;
+            $Power = self::PowerPerInput[($PartNumber >> 12) & 0x0F] ?? null;
+            if (($Inputs === null) || ($Power === null)) {
+                return null;
+            }
+            $RatedPower = $Inputs * $Power;
+            return [
+                'Model'      => 'HMS-' . $RatedPower . 'W-' . $Inputs . 'T',
+                'RatedPower' => $RatedPower
+            ];
+        }
+
+        /**
+         * @param int $PartNumber
+         * @return string z.B. 0x10214201
+         */
+        public static function Format(int $PartNumber): string
+        {
+            return sprintf('0x%08X', $PartNumber);
         }
     }
 

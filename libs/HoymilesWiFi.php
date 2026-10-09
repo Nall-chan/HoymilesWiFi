@@ -70,6 +70,39 @@ namespace HoymilesWiFi\IO{
     {
         public const SendSequenz = 'SendSequenz';
         public const ReplyDeviceFrames = 'ReplyDeviceFrames';
+        // Nur eine Anfrage zur Zeit an die DTU, parallele Verbindungen beantwortet sie nicht zuverlässig
+        public const Request = 'Request';
+        // Länger als eine Anfrage im Fehlerfall dauern kann (Connect 5 s + Lesen 5 s)
+        public const RequestTimeout = 15000;
+    }
+
+    /**
+     * Geräteinformationen aus AppInfo für das Formular und HMSWIFI_GetDeviceInfo.
+     * Schlüssel im Ergebnis: Dtu<Key> bzw. Inverter<Nummer><Key>, z.B. DtuSerialNumber, Inverter1Model.
+     */
+    class DeviceInfo
+    {
+        public const Dtu = 'Dtu';
+        public const Inverter = 'Inverter';
+
+        public const SerialNumber = 'SerialNumber';
+        public const SoftwareVersion = 'SoftwareVersion';
+        public const HardwareVersion = 'HardwareVersion';
+        public const WifiVersion = 'WifiVersion';
+        public const PartNumber = 'PartNumber';
+        public const Model = 'Model';
+        public const RatedPower = 'RatedPower';
+
+        // Key => Beschriftung im Formular (übersetzt)
+        public static $Labels = [
+            self::SerialNumber    => 'Serial number',
+            self::SoftwareVersion => 'Software version',
+            self::HardwareVersion => 'Hardware version',
+            self::WifiVersion     => 'WiFi version',
+            self::PartNumber      => 'Hardware part number',
+            self::Model           => 'Model',
+            self::RatedPower      => 'Rated power'
+        ];
     }
 }
 
@@ -82,6 +115,7 @@ namespace HoymilesWiFi\Inverter{
         public const MI_START = 6;
         public const MI_SHUTDOWN = 7;
         public const LIMIT_POWER = 8;
+        public const LIMIT_POWER_RUNTIME = 211;
         public const PERFORMANCE_DATA_MODE = 33;
         public const ALARM_LIST = 50;
         public const GW_REBOOT = 4096;
@@ -96,6 +130,7 @@ namespace HoymilesWiFi\Inverter{
     class Property
     {
         public const Number = 'Number';
+        public const EnablePowerLimitWatt = 'EnablePowerLimitWatt';
     }
 
     class Variables
@@ -109,7 +144,8 @@ namespace HoymilesWiFi\Inverter{
         public const Link = 'link'; // bool ?
         // Anzahl Abfragen in Folge ohne link, bevor Link auf Alarm geht
         public const LinkMissingLimit = 3;
-        public const PowerLimit = 'pLim'; // 0.1 %
+        public const PowerLimit = 'pLim'; // 0.1 %, nach Action 211 aber 0.1 W
+        public const PowerLimitWatt = 'pLimW'; // 0.1 W, kommt nicht von der DTU, sondern aus pLim nach Action 211
         public const ReactivePower = 'q'; // 0.1 var
         // wnum (laufende Nummer des letzten Warn-Ereignisses) wird nur im IO als Auslöser für Action 50 genutzt
         public const SoftwareVersion = 'swVersion'; // aus AppInfo
@@ -118,6 +154,8 @@ namespace HoymilesWiFi\Inverter{
         public const CurrentWarning = 'wText'; // aus WarnData
         public const LastWarning = 'wLast'; // aus WarnData
         public const WarningList = 'warns'; // aus WarnData, keine Variable
+        public const RatedPower = 'ratedPower'; // W, aus AppInfo (Teilenummer), keine Variable, Maximum für pLimW
+        public const Restarted = 'restarted'; // vom IO gesetzt, wenn der Tagesertrag gesunken ist (Neustart des WR), keine Variable
         public static $Vars = [
             self::Voltage     => [
                 'Voltage',
@@ -253,6 +291,30 @@ namespace HoymilesWiFi\Inverter{
                 0.1,
                 true
             ],
+            self::PowerLimitWatt => [
+                'Power Limit (Watt)',
+                VARIABLETYPE_FLOAT,
+                [
+                    'MIN'                 => 0,
+                    'DIGITS'              => 1,
+                    'CUSTOM_GRADIENT'     => '[]',
+                    'GRADIENT_TYPE'       => 0,
+                    'ICON'                => 'Intensity',
+                    'MAX'                 => 2000,
+                    'PRESENTATION'        => VARIABLE_PRESENTATION_SLIDER,
+                    'INTERVALS'           => '[]',
+                    'INTERVALS_ACTIVE'    => false,
+                    'PERCENTAGE'          => false,
+                    'PREFIX'              => '',
+                    'STEP_SIZE'           => 10,
+                    'SUFFIX'              => ' W',
+                    'DECIMAL_SEPARATOR'   => 'Client',
+                    'THOUSANDS_SEPARATOR' => 'Client',
+                    'USAGE_TYPE'          => 2,
+                ],
+                0.1,
+                true
+            ],
             self::ReactivePower => [
                 'Reactive power',
                 VARIABLETYPE_FLOAT,
@@ -342,6 +404,45 @@ namespace HoymilesWiFi\Inverter{
             'B',
             'C'
         ];
+    }
+
+    /**
+     * Laufzeit-Leistungslimit in Watt (Action 211), nur HMS-W-2T-Familie, Quelle ioBroker.hoymiles (Eistee82, MIT).
+     * Liegt nur im RAM von DTU und WR, kein Flash/EEPROM, geht beim Neustart des WR verloren.
+     */
+    class SetPowerLimitWatt
+    {
+        // Gültiger Bereich in W (POWER_LIMIT_WATT_MIN / POWER_LIMIT_WATT_MAX, signed 16 Bit in 0.1 W)
+        public const Min = 0.1;
+        public const Max = 3276.7;
+        // S:1 wie ioBroker, P in 0.1 W
+        public const DataFormat = "S:1,P:%d\r";
+    }
+
+    /**
+     * Welcher Limit-Befehl zuletzt gesendet wurde. pLim im RealData ist das Echo dieses Befehls (% oder 0.1 W).
+     */
+    class PowerLimitKind
+    {
+        public const Unknown = '';
+        public const Percent = 'percent';
+        public const Watt = 'watt';
+        // Watt-Limit durch Neustart des WR verloren. Die DTU meldet den alten Wert weiter (live 09.10.2026), er gilt aber nicht mehr.
+        public const Lost = 'lost';
+        // Abfragen in Folge mit abweichendem Echo, bevor ein noch nicht bestätigter Befehl als von außen überschrieben gilt.
+        // Direkt nach dem Senden meldet die DTU teilweise noch den alten Wert.
+        public const UnconfirmedLimit = 3;
+    }
+
+    class Attribute
+    {
+        public const PowerLimitKind = 'PowerLimitKind';
+        // Rohwert des zuletzt aus Symcon gesendeten Limits (0.1 % bzw. 0.1 W), 0 = keiner
+        public const PowerLimitSent = 'PowerLimitSent';
+        // Echo hat den gesendeten Rohwert bereits einmal bestätigt
+        public const PowerLimitConfirmed = 'PowerLimitConfirmed';
+        // Nennleistung in W aus der Teilenummer, 0 = unbekannt
+        public const RatedPower = 'RatedPower';
     }
 }
 

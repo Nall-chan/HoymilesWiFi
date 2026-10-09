@@ -64,6 +64,8 @@ eval('declare(strict_types=1);namespace HoymilesIO {?>' . file_get_contents(dirn
  * @property string $EncRand
  * @property int $LastAppInfo
  * @property array $InverterSerials
+ * @property array $DeviceInfo
+ * @property array $LastDailyYield
  * @property array $WarnNumbers
  * @property int $LastWarnData
  * @property int $WarnTrigger
@@ -103,6 +105,8 @@ class HoymilesWiFiIO extends IPSModuleStrict
         $this->EncRand = '';
         $this->LastAppInfo = 0;
         $this->InverterSerials = [];
+        $this->DeviceInfo = [];
+        $this->LastDailyYield = [];
         $this->WarnNumbers = [];
         $this->LastWarnData = 0;
         $this->WarnTrigger = 0;
@@ -165,6 +169,8 @@ class HoymilesWiFiIO extends IPSModuleStrict
         $this->EncRand = '';
         $this->LastAppInfo = 0;
         $this->InverterSerials = [];
+        $this->DeviceInfo = [];
+        $this->LastDailyYield = [];
         $this->WarnNumbers = [];
         $this->LastWarnData = 0;
         $this->WarnTrigger = 0;
@@ -358,6 +364,7 @@ class HoymilesWiFiIO extends IPSModuleStrict
 
                 break;
         }
+        $Form['elements'][] = $this->GetDeviceInfoPanel();
         $this->SendDebug('FORM', json_encode($Form), 0);
         $this->SendDebug('FORM', json_last_error_msg(), 0);
         return json_encode($Form);
@@ -370,6 +377,36 @@ class HoymilesWiFiIO extends IPSModuleStrict
             return false;
         }
         return $this->RealDataResDTO();
+    }
+
+    /**
+     * Liest die Geräteinformationen von DTU und Wechselrichtern (AppInfo) neu von der DTU.
+     *
+     * @return array|false Schlüssel Dtu<Info> bzw. Inverter<Nummer><Info>, z.B. DtuSerialNumber, Inverter1Model, Inverter1RatedPower
+     */
+    public function GetDeviceInfo(): array|false
+    {
+        if ($this->GetStatus() != IS_ACTIVE) {
+            trigger_error($this->Translate('Instance is not active.'), E_USER_NOTICE);
+            return false;
+        }
+        // Ohne bekannte Seriennummern (vor dem ersten RealData) lassen sich die Wechselrichter nicht zuordnen
+        $Result = (count($this->InverterSerials ?: []) > 0) || $this->RealDataResDTO();
+        if ($Result) {
+            $AppInfo = $this->RequestAppInfo();
+            $Result = is_array($AppInfo);
+            if ($Result) {
+                $this->ForwardAppInfo($AppInfo);
+            }
+        }
+        if (!$Result) {
+            // Bei nicht unterdrückten Verbindungsfehlern hat SendCommand bereits gemeldet
+            if ($this->ReadPropertyBoolean(\HoymilesWiFi\IO\Property::SuppressConnectionError)) {
+                trigger_error($this->Translate('Device information could not be read.'), E_USER_NOTICE);
+            }
+            return false;
+        }
+        return $this->GetDeviceInfoList();
     }
 
     public function ForwardData($JSONString): string
@@ -397,7 +434,18 @@ class HoymilesWiFiIO extends IPSModuleStrict
                 }
                 $Result = new \Hoymiles\CommandReqDTO();
                 $Result->mergeFromString($ResultStream);
+                $this->SendDebug('SetPowerLimit Result', $Result->serializeToJsonString(\Google\Protobuf\PrintOptions::EMIT_DEFAULTS), 0);
                 return serialize($Result->getErrCode() == 0);
+            case 'SetPowerLimitWatt':
+                // Laufzeit-Limit (Action 211), dev_kind 1 wie ioBroker.hoymiles
+                $Request = new \Hoymiles\CommandResDTO();
+                $Request->setTime(time());
+                $Request->setTid(time());
+                $Request->setPackageNub(1);
+                $Request->setDevKind(\HoymilesWiFi\Inverter\DeviceKind::DTU);
+                $Request->setAction(\HoymilesWiFi\Inverter\Actions::LIMIT_POWER_RUNTIME);
+                $Request->setData($Data['Data']);
+                return serialize($this->SendCloudCommand($Request, 'SetPowerLimitWatt', \Hoymiles\DTU\Commands::CommandResDTO));
             case 'StartInverter':
                 $Request = new \Hoymiles\CommandResDTO();
                 $Request->setTime(time());
@@ -632,6 +680,26 @@ class HoymilesWiFiIO extends IPSModuleStrict
             $this->RegisterReference($VarId);
         }
     }
+
+    /**
+     * Geräteinformationen aus dem Buffer als flache Liste.
+     *
+     * @return array
+     */
+    private function GetDeviceInfoList(): array
+    {
+        $DeviceInfo = $this->DeviceInfo ?: [];
+        $Result = [];
+        foreach ($DeviceInfo[\HoymilesWiFi\IO\DeviceInfo::Dtu] ?? [] as $Key => $Value) {
+            $Result[\HoymilesWiFi\IO\DeviceInfo::Dtu . $Key] = $Value;
+        }
+        foreach ($DeviceInfo[\HoymilesWiFi\IO\DeviceInfo::Inverter] ?? [] as $Number => $Info) {
+            foreach ($Info as $Key => $Value) {
+                $Result[\HoymilesWiFi\IO\DeviceInfo::Inverter . $Number . $Key] = $Value;
+            }
+        }
+        return $Result;
+    }
     private function FormUpdateByWatchdogType(int $WatchdogType): void
     {
         switch ($WatchdogType) {
@@ -846,17 +914,39 @@ class HoymilesWiFiIO extends IPSModuleStrict
         }
         $this->InverterSerials = $InverterSerials;
 
+        // Tagesertrag je Wechselrichter: sinkt er, wurde der Wechselrichter neu gestartet (nachts oder per Reboot).
+        // Fehlt ed (proto3: 0), wird der Wert nicht ausgewertet.
+        $DailyYields = [];
+        foreach ($SolarPorts as $SolarPort) {
+            $SerialNumber = (string) $SolarPort->getSn();
+            $DailyYields[$SerialNumber] = ($DailyYields[$SerialNumber] ?? 0) + $SolarPort->getEd();
+        }
+        $LastDailyYield = $this->LastDailyYield ?: [];
+
         foreach ($Inverters as $Inverter) {
-            $this->SendDebug('Inverter:' . $Inverter->getVer(), $Inverter->serializeToJsonString(\Google\Protobuf\PrintOptions::EMIT_DEFAULTS), 0);
+            $InverterData = $Inverter->serializeToJsonString(\Google\Protobuf\PrintOptions::EMIT_DEFAULTS);
+            $SerialNumber = (string) $Inverter->getSn();
+            $DailyYield = $DailyYields[$SerialNumber] ?? 0;
+            if ($DailyYield > 0) {
+                if (isset($LastDailyYield[$SerialNumber]) && ($DailyYield < $LastDailyYield[$SerialNumber])) {
+                    $this->SendDebug('Inverter:' . $Inverter->getVer(), 'Daily yield ' . $LastDailyYield[$SerialNumber] . ' -> ' . $DailyYield . ', inverter restarted', 0);
+                    $Values = json_decode($InverterData, true);
+                    $Values[\HoymilesWiFi\Inverter\Variables::Restarted] = true;
+                    $InverterData = json_encode($Values);
+                }
+                $LastDailyYield[$SerialNumber] = $DailyYield;
+            }
+            $this->SendDebug('Inverter:' . $Inverter->getVer(), $InverterData, 0);
             $this->SendDataToChildren(
                 json_encode(
                     [
                         'DataID'     => \HoymilesWiFi\GUID::IoToInverter,
-                        'Data'       => $Inverter->serializeToJsonString(\Google\Protobuf\PrintOptions::EMIT_DEFAULTS)
+                        'Data'       => $InverterData
                     ]
                 )
             );
         }
+        $this->LastDailyYield = $LastDailyYield;
         foreach ($SolarPorts as $SolarPort) {
             $this->SendDebug('Solar:' . $SolarPort->getPi(), $SolarPort->serializeToJsonString(\Google\Protobuf\PrintOptions::EMIT_DEFAULTS), 0);
             $this->SendDataToChildren(
@@ -1048,12 +1138,82 @@ class HoymilesWiFiIO extends IPSModuleStrict
      * @param array $AppInfo
      * @return void
      */
+    /**
+     * ExpansionPanel mit den Geräteinformationen, je Zeile Info-Typ und Info-Wert.
+     *
+     * @return array Formular-Element
+     */
+    private function GetDeviceInfoPanel(): array
+    {
+        $DeviceInfo = $this->DeviceInfo ?: [];
+        $Rows = [];
+        foreach ($DeviceInfo[\HoymilesWiFi\IO\DeviceInfo::Dtu] ?? [] as $Key => $Value) {
+            $Rows[] = $this->GetDeviceInfoRow('DTU', $Key, $Value);
+        }
+        foreach ($DeviceInfo[\HoymilesWiFi\IO\DeviceInfo::Inverter] ?? [] as $Number => $Info) {
+            foreach ($Info as $Key => $Value) {
+                $Rows[] = $this->GetDeviceInfoRow($this->Translate('Inverter') . ' ' . $Number, $Key, $Value);
+            }
+        }
+        if (count($Rows) == 0) {
+            $Rows[] = [
+                'type'    => 'Label',
+                'caption' => 'No device information received yet.'
+            ];
+        }
+        return [
+            'type'    => 'ExpansionPanel',
+            'caption' => 'Device information',
+            'items'   => $Rows
+        ];
+    }
+
+    /**
+     * @param string $Device
+     * @param string $Key
+     * @param mixed $Value
+     * @return array RowLayout mit zwei Labels
+     */
+    private function GetDeviceInfoRow(string $Device, string $Key, mixed $Value): array
+    {
+        if ($Key == \HoymilesWiFi\IO\DeviceInfo::RatedPower) {
+            $Value = ($Value > 0) ? $Value . ' W' : $this->Translate('unknown');
+        } elseif ($Value === '') {
+            $Value = $this->Translate('unknown');
+        }
+        return [
+            'type'  => 'RowLayout',
+            'items' => [
+                [
+                    'type'    => 'Label',
+                    'caption' => $Device . ' ' . $this->Translate(\HoymilesWiFi\IO\DeviceInfo::$Labels[$Key] ?? $Key) . ':',
+                    'width'   => '300px'
+                ],
+                [
+                    'type'    => 'Label',
+                    'caption' => (string) $Value
+                ]
+            ]
+        ];
+    }
+
     private function ForwardAppInfo(array $AppInfo): void
     {
+        $DtuSoftwareVersion = 'V' . \Hoymiles\DTU\AppInfo::FormatDtuVersion($AppInfo['DtuSwVersion']);
+        $DtuHardwareVersion = 'H' . \Hoymiles\DTU\AppInfo::FormatDtuVersion($AppInfo['DtuHwVersion']);
+        $DeviceInfo = [
+            \HoymilesWiFi\IO\DeviceInfo::Dtu      => [
+                \HoymilesWiFi\IO\DeviceInfo::SerialNumber    => $AppInfo['DtuSerialNumber'],
+                \HoymilesWiFi\IO\DeviceInfo::SoftwareVersion => $DtuSoftwareVersion,
+                \HoymilesWiFi\IO\DeviceInfo::HardwareVersion => $DtuHardwareVersion,
+                \HoymilesWiFi\IO\DeviceInfo::WifiVersion     => $AppInfo['WifiVersion']
+            ],
+            \HoymilesWiFi\IO\DeviceInfo::Inverter => []
+        ];
         $DTU = json_encode([
             \HoymilesWiFi\DTU\Variables::SignalStrength  => $AppInfo['SignalStrength'],
-            \HoymilesWiFi\DTU\Variables::SoftwareVersion => 'V' . \Hoymiles\DTU\AppInfo::FormatDtuVersion($AppInfo['DtuSwVersion']),
-            \HoymilesWiFi\DTU\Variables::HardwareVersion => 'H' . \Hoymiles\DTU\AppInfo::FormatDtuVersion($AppInfo['DtuHwVersion']),
+            \HoymilesWiFi\DTU\Variables::SoftwareVersion => $DtuSoftwareVersion,
+            \HoymilesWiFi\DTU\Variables::HardwareVersion => $DtuHardwareVersion,
             \HoymilesWiFi\DTU\Variables::WifiVersion     => $AppInfo['WifiVersion']
         ]);
         $this->SendDebug('DTU Info', $DTU, 0);
@@ -1074,12 +1234,24 @@ class HoymilesWiFiIO extends IPSModuleStrict
                 $this->LastAppInfo = 0;
                 continue;
             }
+            $SoftwareVersion = 'V' . \Hoymiles\DTU\AppInfo::FormatInverterSwVersion($PvInfo['SwVersion']);
+            $HardwareVersion = 'H' . \Hoymiles\DTU\AppInfo::FormatInverterHwVersion($PvInfo['HwVersion']);
+            $Model = \Hoymiles\DTU\PartNumber::Decode($PvInfo['PartNumber']);
+            $DeviceInfo[\HoymilesWiFi\IO\DeviceInfo::Inverter][$Number] = [
+                \HoymilesWiFi\IO\DeviceInfo::SerialNumber    => $PvInfo['SerialNumber'],
+                \HoymilesWiFi\IO\DeviceInfo::SoftwareVersion => $SoftwareVersion,
+                \HoymilesWiFi\IO\DeviceInfo::HardwareVersion => $HardwareVersion,
+                \HoymilesWiFi\IO\DeviceInfo::PartNumber      => \Hoymiles\DTU\PartNumber::Format($PvInfo['PartNumber']),
+                \HoymilesWiFi\IO\DeviceInfo::Model           => $Model['Model'] ?? '',
+                \HoymilesWiFi\IO\DeviceInfo::RatedPower      => $Model['RatedPower'] ?? 0
+            ];
             // "ver" muss vor weiteren Feldern stehen, die Inverter-Instanz filtert auf "ver":Nummer,
             $Inverter = json_encode([
                 'sn'                                              => $PvInfo['SerialNumber'],
                 'ver'                                             => $Number,
-                \HoymilesWiFi\Inverter\Variables::SoftwareVersion => 'V' . \Hoymiles\DTU\AppInfo::FormatInverterSwVersion($PvInfo['SwVersion']),
-                \HoymilesWiFi\Inverter\Variables::HardwareVersion => 'H' . \Hoymiles\DTU\AppInfo::FormatInverterHwVersion($PvInfo['HwVersion'])
+                \HoymilesWiFi\Inverter\Variables::SoftwareVersion => $SoftwareVersion,
+                \HoymilesWiFi\Inverter\Variables::HardwareVersion => $HardwareVersion,
+                \HoymilesWiFi\Inverter\Variables::RatedPower      => $Model['RatedPower'] ?? 0
             ]);
             $this->SendDebug('Inverter Info:' . $Number, $Inverter, 0);
             $this->SendDataToChildren(
@@ -1091,18 +1263,21 @@ class HoymilesWiFiIO extends IPSModuleStrict
                 )
             );
         }
+        ksort($DeviceInfo[\HoymilesWiFi\IO\DeviceInfo::Inverter]);
+        $this->DeviceInfo = $DeviceInfo;
     }
 
     /**
-     * Sendet einen Befehl per CloudCommandResDTO (wie hoymiles-wifi).
+     * Sendet einen Befehl per CloudCommandResDTO (wie hoymiles-wifi) oder CommandResDTO.
      *
      * @param \Hoymiles\CommandResDTO $Request
      * @param string $DebugName
+     * @param int $Command CloudCommandResDTO (0x2305) oder CommandResDTO (0xA305)
      * @return bool true wenn die DTU den Befehl ohne Fehler bestätigt
      */
-    private function SendCloudCommand(\Hoymiles\CommandResDTO $Request, string $DebugName): bool
+    private function SendCloudCommand(\Hoymiles\CommandResDTO $Request, string $DebugName, int $Command = \Hoymiles\DTU\Commands::CloudCommandResDTO): bool
     {
-        $ResultStream = $this->SendCommand(\Hoymiles\DTU\Commands::CloudCommandResDTO, $Request->serializeToString());
+        $ResultStream = $this->SendCommand($Command, $Request->serializeToString());
         if ($ResultStream === false) {
             return false;
         }
@@ -1194,8 +1369,16 @@ class HoymilesWiFiIO extends IPSModuleStrict
         $DeviceAddress = 'tcp://' . $this->ReadPropertyString(\HoymilesWiFi\IO\Property::Host) . ':' . $this->ReadPropertyInteger(\HoymilesWiFi\IO\Property::Port);
         $errno = 0;
         $errstr = '';
+        // Die DTU beantwortet parallele Verbindungen nicht zuverlässig (z.B. Timer-Abfrage und Leistungslimit gleichzeitig)
+        $LockName = __CLASS__ . '.' . $this->InstanceID . '.' . \HoymilesWiFi\IO\Locks::Request;
+        if (!IPS_SemaphoreEnter($LockName, \HoymilesWiFi\IO\Locks::RequestTimeout)) {
+            $this->SendDebug('ERROR', 'Lock timeout', 0);
+            $this->ConnectionError($this->Translate('DTU is busy with another request.'), $TriggerError, $Quiet);
+            return false;
+        }
         $fp = @stream_socket_client($DeviceAddress, $errno, $errstr, 5);
         if (!$fp) {
+            IPS_SemaphoreLeave($LockName);
             $this->SendDebug('ERROR (' . $errno . ')', $errstr, 0);
             $this->ConnectionError($this->Translate('Error on connect') . '(' . $errno . ') ' . $errstr, $TriggerError, $Quiet);
             return false;
@@ -1204,14 +1387,16 @@ class HoymilesWiFiIO extends IPSModuleStrict
             for ($fwrite = 0, $written = 0, $max = strlen($Content); $written < $max; $written += $fwrite) {
                 $fwrite = @fwrite($fp, substr($Content, $written));
                 if ($fwrite === false) {
-                    $this->SendDebug('ERROR on write (' . $errno . ')', $errstr, 0);
                     @fclose($fp);
+                    IPS_SemaphoreLeave($LockName);
+                    $this->SendDebug('ERROR on write (' . $errno . ')', $errstr, 0);
                     $this->ConnectionError($this->Translate('Error on write') . '(' . $errno . ') ' . $errstr, $TriggerError, $Quiet);
                     return false;
                 }
             }
             $Data = $this->ReadFrame($fp, $EncRand !== '');
             fclose($fp);
+            IPS_SemaphoreLeave($LockName);
         }
         if (!$Data) {
             $this->SendDebug('ERROR (0)', 'Timeout', 0);
