@@ -4,8 +4,8 @@
 [![License](https://img.shields.io/badge/License-Custom--NC--SA-green.svg)](#10-lizenz)
 [![Check Style](https://github.com/Nall-chan/HoymilesWiFi/workflows/Check%20Style/badge.svg)](https://github.com/Nall-chan/HoymilesWiFi/actions)
 [![Run Tests](https://github.com/Nall-chan/HoymilesWiFi/workflows/Run%20Tests/badge.svg)](https://github.com/Nall-chan/HoymilesWiFi/actions)  
-[![PayPal.Me](https://img.shields.io/badge/PayPal-Me-lightblue.svg)](#9-spenden)
-[![Wunschliste](https://img.shields.io/badge/Wunschliste-Amazon-ff69fb.svg)](#9-spenden)  
+[![PayPal.Me](https://img.shields.io/badge/PayPal-Me-lightblue.svg)](#2-spenden)
+[![Wunschliste](https://img.shields.io/badge/Wunschliste-Amazon-ff69fb.svg)](#2-spenden)  
 
 # Hoymiles WiFi SolarPort <!-- omit in toc -->
 
@@ -19,9 +19,14 @@ Anzeigen der Werte eines Solar Anschlusses.
 - [4. Einrichten der Instanzen in IP-Symcon](#4-einrichten-der-instanzen-in-ip-symcon)
 - [5. Statusvariablen](#5-statusvariablen)
   - [Statusvariablen](#statusvariablen)
+- [6. Visualisierung](#6-visualisierung)
+  - [Kachel Visualisierung](#kachel-visualisierung)
+  - [WebFront Visualisierung](#webfront-visualisierung)
 - [7. PHP-Befehlsreferenz](#7-php-befehlsreferenz)
-- [8. Changelog](#8-changelog)
-- [9. Spenden](#9-spenden)
+- [8. Aktionen](#8-aktionen)
+- [9. Anhang](#9-anhang)
+  - [1. Changelog](#1-changelog)
+  - [2. Spenden](#2-spenden)
 - [10. Lizenz](#10-lizenz)
 
 ## 1. Funktionsumfang
@@ -65,18 +70,42 @@ Die Statusvariablen werden automatisch angelegt. Das Löschen einzelner kann zu 
 | Spannung         | float | Anliegende Spannung am Anschluss                  |
 | Strom            | float | Ankommender Strom                                 |
 | Leistung         | float | Aktuelle Leistung der angeschlossene Solar-Module |
-| Leistung gesamt  | float | Gesamtsumme Leistung                              |
-| Leistung täglich | float | Summe tägliche Leistung                           |
+| Ertrag gesamt    | float | Gesamtertrag des Anschlusses in kWh               |
+| Ertrag täglich   | float | Tagesertrag des Anschlusses in Wh                 |
+
+Bis Version 1.25 hießen `Ertrag gesamt` und `Ertrag täglich` `Leistung gesamt` und `Leistung täglich`. Bestehende Statusvariablen behalten ihren Namen.  
+
+## 6. Visualisierung
+
+### Kachel Visualisierung
+
+Die Instanz wird als Liste ihrer Statusvariablen dargestellt.  
+
+![Kachel](imgs/tile_list.png)  
+
+### WebFront Visualisierung
+
+Die Statusvariablen werden direkt oder über Links dargestellt. Es gibt keine bedienbaren Statusvariablen.  
+
+![WebFront](imgs/webfront.png)  
 
 ## 7. PHP-Befehlsreferenz
 
    Es existieren keine PHP-Befehle für dieses Modul.  
 
-## 8. Changelog
+## 8. Aktionen
+
+**Grundsätzlich können alle bedienbaren Statusvariablen als Ziel einer [`Aktion`](https://www.symcon.de/service/dokumentation/konzepte/automationen/ablaufplaene/aktionen/) mit `Auf Wert schalten` angesteuert werden, so dass hier keine speziellen Aktionen benutzt werden müssen.**
+
+Für dieses Modul gibt es keine speziellen Aktionen.  
+
+## 9. Anhang
+
+### 1. Changelog
 
 siehe Changelog der [Hoymiles WiFi-Library](../README.md#2-changelog).  
 
-## 9. Spenden  
+### 2. Spenden  
   
   Die Library ist für die nicht kommerzielle Nutzung kostenlos, Schenkungen als Unterstützung für den Autor werden hier akzeptiert:  
 

@@ -1,11 +1,11 @@
 [![SDK](https://img.shields.io/badge/Symcon-PHPModul-red.svg)](https://www.symcon.de/service/dokumentation/entwicklerbereich/sdk-tools/sdk-php/)
 [![Module Version](https://img.shields.io/badge/dynamic/json?url=https%3A%2F%2Fraw.githubusercontent.com%2FNall-chan%2FHoymilesWiFi%2Frefs%2Fheads%2Fmaster%2Flibrary.json&query=%24.version&label=Modul%20Version&color=blue)](https://community.symcon.de/t/modul-hoymiles-wifi-series-beta/135536/)
 [![Symcon Version](https://img.shields.io/badge/dynamic/json?url=https%3A%2F%2Fraw.githubusercontent.com%2FNall-chan%2FHoymilesWiFi%2Frefs%2Fheads%2Fmaster%2Flibrary.json&query=%24.compatibility.version&suffix=%3E&label=Symcon%20Version&color=green)](https://www.symcon.de/de/service/dokumentation/installation/migrationen/v80-v81-q3-2025/)  
-[![License](https://img.shields.io/badge/License-Custom--NC--SA-green.svg)](#7-lizenz)
+[![License](https://img.shields.io/badge/License-Custom--NC--SA-green.svg)](#6-lizenz)
 [![Check Style](https://github.com/Nall-chan/HoymilesWiFi/workflows/Check%20Style/badge.svg)](https://github.com/Nall-chan/HoymilesWiFi/actions)
 [![Run Tests](https://github.com/Nall-chan/HoymilesWiFi/workflows/Run%20Tests/badge.svg)](https://github.com/Nall-chan/HoymilesWiFi/actions)  
-[![PayPal.Me](https://img.shields.io/badge/PayPal-Me-lightblue.svg)](#6-spenden)
-[![Wunschliste](https://img.shields.io/badge/Wunschliste-Amazon-ff69fb.svg)](#6-spenden)  
+[![PayPal.Me](https://img.shields.io/badge/PayPal-Me-lightblue.svg)](#3-spenden)
+[![Wunschliste](https://img.shields.io/badge/Wunschliste-Amazon-ff69fb.svg)](#3-spenden)  
 
 # Hoymiles WiFi Wechselrichter <!-- omit in toc -->  
 
@@ -20,31 +20,22 @@ Integration der Hoymiles Wechselrichter mit integrierten WiFi
 - [2. Voraussetzungen](#2-voraussetzungen)
   - [Firmware der DTU](#firmware-der-dtu)
 - [3. Software-Installation](#3-software-installation)
-- [4. Einrichten der Instanzen in IP-Symcon](#4-einrichten-der-instanzen-in-ip-symcon)
+- [4. Enthaltende Module](#4-enthaltende-module)
 - [5. Anhang](#5-anhang)
   - [1. GUID der Module](#1-guid-der-module)
   - [2. Changelog](#2-changelog)
-- [6. Spenden](#6-spenden)
-- [7. Lizenz](#7-lizenz)
+  - [3. Spenden](#3-spenden)
+- [6. Lizenz](#6-lizenz)
 
 ## 1. Funktionsumfang
 
-Folgende Module beinhaltet das Hoymiles WiFi Smart Rollos Repository:
-
-- **Hoymiles WiFi IO** ([Dokumentation](HoymilesWiFi%20IO/README.md))  
-  IO Instanz zur Kommunikation mit der integrierten DTU.  
-
-- **Hoymiles WiFi Configurator** ([Dokumentation](HoymilesWiFi%20Configurator/README.md))  
-  Konfigurator Instanz zum auslesen der bekannten Geräte und einfachen anlegen von Instanzen in Symcon.  
-
-- **Hoymiles WiFi DTU** ([Dokumentation](HoymilesWiFi%20DTU/README.md))  
-  Geräte Instanz für die integrierte DTU.  
-
-- **Hoymiles WiFi Inverter** ([Dokumentation](HoymilesWiFi%20Inverter/README.md))  
-  Geräte Instanz für den integrierten Inverter.  
-
-- **Hoymiles WiFi SolarPort** ([Dokumentation](HoymilesWiFi%20SolarPort/README.md))  
-  Geräte Instanz für jeweils einen Anschluss von Solarmodulen.  
+- Auslesen der Werte von DTU, Wechselrichter und Solar-Anschlüssen (Leistung, Ertrag, Spannung, Strom, Temperatur, Versionen)  
+- Leistungslimit in Prozent (dauerhaft) und in Watt (Laufzeit-Limit, HMS-W-2T-Familie)  
+- Wechselrichter ein- und ausschalten  
+- Warnliste des Wechselrichters  
+- Geräteinformationen (Seriennummern, Versionen, Modell und Nennleistung)  
+- Unterstützung der verschlüsselten Kommunikation ab DTU-Firmware V01.01.01  
+- Schlafmodus und Power-On Überwachung für Wechselrichter, die nachts abschalten  
 
 ## 2. Voraussetzungen  
 
@@ -83,10 +74,25 @@ Während der Aktualisierung ist die DTU nicht erreichbar, die IO-Instanz meldet 
 **Bei kommerzieller Nutzung (z.B. als Errichter oder Integrator) wenden Sie sich bitte an den Autor.**  
 ![Module-Store](imgs/install.png)  
 
-## 4. Einrichten der Instanzen in IP-Symcon
+## 4. Enthaltende Module
 
-Nach der installation des Modules, muss eine Instanz des [Configurator-Moduls](HoymilesWiFi%20Configurator/README.md) angelegt werden.  
+Nach der Installation der Library muss eine Instanz des [Configurator-Moduls](HoymilesWiFi%20Configurator/README.md) angelegt werden.  
 Dadurch wird automatisch der benötigte [IO](HoymilesWiFi%20IO/README.md) erstellt.  
+
+- **Hoymiles WiFi IO** ([Dokumentation](HoymilesWiFi%20IO/README.md))  
+  IO Instanz zur Kommunikation mit der integrierten DTU.  
+
+- **Hoymiles WiFi Configurator** ([Dokumentation](HoymilesWiFi%20Configurator/README.md))  
+  Konfigurator Instanz zum auslesen der bekannten Geräte und einfachen anlegen von Instanzen in Symcon.  
+
+- **Hoymiles WiFi DTU** ([Dokumentation](HoymilesWiFi%20DTU/README.md))  
+  Geräte Instanz für die integrierte DTU.  
+
+- **Hoymiles WiFi Inverter** ([Dokumentation](HoymilesWiFi%20Inverter/README.md))  
+  Geräte Instanz für den integrierten Inverter.  
+
+- **Hoymiles WiFi SolarPort** ([Dokumentation](HoymilesWiFi%20SolarPort/README.md))  
+  Geräte Instanz für jeweils einen Anschluss von Solarmodulen.  
 
 ## 5. Anhang
 
@@ -110,6 +116,10 @@ Dadurch wird automatisch der benötigte [IO](HoymilesWiFi%20IO/README.md) erstel
 - Ein in der App geändertes Leistungslimit wird erkannt und in `Leistungslimit` (%) übernommen  
 - Dokumentation: Warnung, dass jedes Setzen des Leistungslimit in % den Flash-Speicher von DTU und Wechselrichter beschreibt  
 - Fix: Kamen zwei Anfragen gleichzeitig (z.B. zyklische Abfrage und `HMSWIFI_SetInverterState`), beantwortete die DTU nur eine davon; die andere meldete eine Zeitüberschreitung, obwohl der Befehl teilweise trotzdem ausgeführt wurde. Anfragen an die DTU werden jetzt nacheinander gesendet  
+- Fix: Scheiterte nach der nächtlichen Abschaltung die erste Abfrage einer verschlüsselten DTU, blieb das IO inaktiv, bis es manuell aktiviert wurde  
+- Fix: Statusvariable DTU `WLAN Signalstärke` zeigte in der Kachel-Visualisierung kein WLAN-Symbol  
+- SolarPort: Statusvariablen `Leistung gesamt` und `Leistung täglich` heißen bei neuen Instanzen `Ertrag gesamt` und `Ertrag täglich` (bestehende Variablen bei Bedarf selbst umbenennen)  
+- Dokumentation: Zusammenspiel von Leistungslimit in % und in Watt (es gilt der zuletzt gesendete Befehl), Hinweise zu `HMSWIFI_RebootDTU` und `HMSWIFI_RebootInverter` mit aktueller Firmware, Abschnitte Visualisierung (mit Screenshots von Kachel-Visualisierung und WebFront) und Aktionen in den Modul-Dokumentationen, aktuelle Screenshots der Konfiguration  
 
 **Version 1.25:**  
 
@@ -167,15 +177,15 @@ Dadurch wird automatisch der benötigte [IO](HoymilesWiFi%20IO/README.md) erstel
 
 - Erstes Release nach Beta  
 
-## 6. Spenden  
-  
-  Die Library ist für die nicht kommerzielle Nutzung kostenlos, Schenkungen als Unterstützung für den Autor werden hier akzeptiert:  
+### 3. Spenden  
+
+Die Library ist für die nicht kommerzielle Nutzung kostenlos, Schenkungen als Unterstützung für den Autor werden hier akzeptiert:  
 
 [![PayPal.Me](https://img.shields.io/badge/PayPal-Me-lightblue.svg)](https://paypal.me/Nall4chan)  
 
 [![Wunschliste](https://img.shields.io/badge/Wunschliste-Amazon-ff69fb.svg)](https://www.amazon.de/hz/wishlist/ls/YU4AI9AQT9F?ref_=wl_share)
 
-## 7. Lizenz
+## 6. Lizenz
 
 **IPS-Modul:**  
 [Custom NC-SA](LICENSE)
@@ -185,3 +195,14 @@ Dadurch wird automatisch der benötigte [IO](HoymilesWiFi%20IO/README.md) erstel
 - **Quelle:** ioBroker.hoymiles (https://github.com/Eistee82/ioBroker.hoymiles) (src/lib/alarmCodes.ts und src/lib/alarmCodesData.ts)
 - **MIT License, Copyright (c) Eistee82**
 - **Die Texte stammen dort aus dem Hoymiles-Cloud-Wörterbuch (mwc) und der warn_code.json der S-Miles App.**
+
+**Laufzeit-Leistungslimit in Watt und Feldnummern der Warnliste**
+
+- **Quelle:** ioBroker.hoymiles (https://github.com/Eistee82/ioBroker.hoymiles)
+- **MIT License, Copyright (c) Eistee82**
+
+**Modell und Nennleistung aus der Hardware-Teilenummer**
+
+- **Quelle:** OpenDTU (https://github.com/tbnobody/OpenDTU) (lib/Hoymiles/src/parser/DevInfoParser.cpp)
+- **GPL-2.0, Copyright (c) Thomas Basler und Mitwirkende**
+- **Übernommen wurde nur das Schema der Modelltabelle (Anzahl Eingänge und Leistung je Eingang), kein Code.**

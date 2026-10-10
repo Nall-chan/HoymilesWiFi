@@ -12,7 +12,7 @@
             "name": "EnablePowerLimitWatt",
             "type": "CheckBox",
             "caption": "Runtime power limit in watts (HMS-W-2T only, value is reset when the inverter restarts)",
-            "width": "750px"
+            "width": "900px"
         }
     ],
     "actions": [

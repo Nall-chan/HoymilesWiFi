@@ -316,7 +316,10 @@ class HoymilesWiFiIO extends IPSModuleStrict
             case \HoymilesWiFi\IO\Timer::Watchdog:
                 if ($this->CheckCondition()) {
                     $this->SetTimerInterval(\HoymilesWiFi\IO\Timer::Watchdog, 0);
-                    $this->SetActive();
+                    // Schlägt die erste Abfrage ohne Statuswechsel fehl (z.B. Datenfehler), weiter überwachen
+                    if (!$this->SetActive() && ($this->GetStatus() != IS_ACTIVE) && $this->ReadPropertyBoolean(\HoymilesWiFi\IO\Property::Active)) {
+                        $this->SetTimerInterval(\HoymilesWiFi\IO\Timer::Watchdog, $this->ReadPropertyInteger(\HoymilesWiFi\IO\Property::WatchdogInterval) * 1000);
+                    }
                 }
                 return;
             case \HoymilesWiFi\IO\Property::WatchdogType:
@@ -1445,8 +1448,12 @@ class HoymilesWiFiIO extends IPSModuleStrict
             $Payload = \Hoymiles\DTU\Encryption::Decrypt($EncRand, $RecvCommand, $RecvSequenz, $Payload);
             if ($Payload === false) {
                 $this->SendDebug('Decrypt', 'failed', 0);
-                // Schlüssel könnte sich geändert haben, beim nächsten Request neu ermitteln
+                // Schlüssel könnte sich geändert haben (z.B. nach Neustart der DTU), neu ermitteln und einmal wiederholen
                 $this->EncryptionChecked = false;
+                if ($AllowRetry && $this->CheckEncryption() && ($this->EncRand !== '')) {
+                    $this->SendDebug('Decrypt', 'retry with new key', 0);
+                    return $this->SendCommand($Command, $PlainRequestBytes, false, $Quiet);
+                }
                 $this->DataError($this->Translate('Error on decrypt data.'), $Quiet);
                 return false;
             }

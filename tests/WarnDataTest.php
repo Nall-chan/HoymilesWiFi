@@ -24,9 +24,9 @@ class WarnDataTest extends TestCase
     public function testEmptyResponse(): void
     {
         // Antwort einer DTU (V00.01.11) ohne Einträge
-        $Result = WarnData::ParseResponse(hex2bin('0a0c34313433393233373332343610f9ad94d606280f'));
+        $Result = WarnData::ParseResponse(hex2bin('0a0c34313433303030303030303010f9ad94d606280f'));
         $this->assertIsArray($Result);
-        $this->assertSame('414392373246', $Result['DtuSerialNumber']);
+        $this->assertSame('414300000000', $Result['DtuSerialNumber']);
         $this->assertSame(1791301369, $Result['Time']);
         $this->assertSame(1, $Result['PackageCount']);
         $this->assertSame(0, $Result['PackageNow']);
@@ -45,7 +45,7 @@ class WarnDataTest extends TestCase
         $Warn2 = Protobuf::EncodeVarintField(1, 0x116491234567)
             . Protobuf::EncodeVarintField(2, 38)
             . Protobuf::EncodeVarintField(4, 1791300000);
-        $Data = Protobuf::EncodeBytesField(1, '414392373246')
+        $Data = Protobuf::EncodeBytesField(1, '414300000000')
             . Protobuf::EncodeVarintField(3, 2)
             . Protobuf::EncodeVarintField(4, 1)
             . Protobuf::EncodeBytesField(6, $Warn1)

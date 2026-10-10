@@ -552,7 +552,7 @@ namespace HoymilesWiFi\DTU{
                 'WiFi signal strength',
                 VARIABLETYPE_INTEGER,
                 [
-                    'ICON'                => 'Wifi',
+                    'ICON'                => 'wifi',
                     'DECIMAL_SEPARATOR'   => 'Client',
                     'COLOR'               => -1,
                     'MIN'                 => 0,
